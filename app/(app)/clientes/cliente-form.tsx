@@ -8,11 +8,7 @@ type Valores = Partial<Record<
   string | null
 >>;
 
-const SOLUCOES = { contabil: "Serviço contábil", regularizacao: "Regularização de pendências", abertura: "Abertura de empresa", consultoria: "Consultoria" };
-const REGIMES = { nao_definido: "Não definido", mei: "MEI", simples: "Simples Nacional", presumido: "Lucro Presumido", real: "Lucro Real" };
-const STATUS = { prospect: "Prospect", onboarding: "Em onboarding", ativo: "Ativo", inativo: "Inativo" };
-
-export const rotulos = { SOLUCOES, REGIMES, STATUS };
+import { REGIMES, SOLUCOES, STATUS } from "@/lib/rotulos-cliente";
 
 const campo = "w-full rounded border px-3 py-2";
 

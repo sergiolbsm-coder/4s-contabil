@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { clientes } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { podeEditarClientes, podeVerClientes } from "@/lib/papeis";
-import { rotulos } from "./cliente-form";
+import { SOLUCOES, STATUS } from "@/lib/rotulos-cliente";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +39,8 @@ export default async function Clientes() {
               return (
                 <tr key={c.id} className="border-b last:border-0">
                   <td className="p-3"><Link href={`/clientes/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.razaoSocial}</Link></td>
-                  <td className="p-3">{rotulos.SOLUCOES[c.solucao]}</td>
-                  <td className="p-3">{rotulos.STATUS[c.status]}</td>
+                  <td className="p-3">{SOLUCOES[c.solucao]}</td>
+                  <td className="p-3">{STATUS[c.status]}</td>
                   <td className={`p-3 ${d !== null && d <= 30 ? "font-medium text-red-600" : ""}`}>
                     {d === null ? "—" : d < 0 ? "Vencido" : `${d} dias`}
                   </td>
