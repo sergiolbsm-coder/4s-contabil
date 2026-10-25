@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { clienteDoEscritorio } from "@/lib/guards";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, contatos, contratos, onboardings } from "@/db/schema";
@@ -20,7 +21,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
-  const [c] = await db.select().from(clientes).where(eq(clientes.id, id)).limit(1);
+  const c = await clienteDoEscritorio(u.escritorio.id, id);
   if (!c) notFound();
   const [cts, ctr, [onb]] = await Promise.all([
     db.select().from(contatos).where(eq(contatos.clienteId, id)),
@@ -68,7 +69,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
             <input name="cargo" placeholder="Cargo" className={campo} />
             <input name="email" type="email" placeholder="E-mail" className={campo} />
             <input name="telefone" placeholder="Telefone" className={campo} />
-            <button className="rounded bg-slate-900 px-3 py-1 text-sm text-white">Adicionar</button>
+            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
           </form>
         )}
       </section>
@@ -86,7 +87,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
             <input name="descricao" placeholder="Descrição" required className={campo} />
             <input name="valor" placeholder="Valor mensal (R$)" className={campo} />
             <input name="inicio" type="date" className={campo} />
-            <button className="rounded bg-slate-900 px-3 py-1 text-sm text-white">Adicionar</button>
+            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
           </form>
         )}
       </section>

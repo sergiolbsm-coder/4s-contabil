@@ -24,6 +24,7 @@ export default async function PainelOnboarding() {
     .from(onboardings)
     .innerJoin(clientes, eq(clientes.id, onboardings.clienteId))
     .innerJoin(onboardingEtapas, eq(onboardingEtapas.onboardingId, onboardings.id))
+    .where(eq(clientes.escritorioId, u.escritorio.id))
     .orderBy(asc(onboardingEtapas.ordem));
 
   const porCliente = new Map<string, { clienteId: string; razaoSocial: string; etapas: typeof linhas }>();

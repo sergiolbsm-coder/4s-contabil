@@ -29,6 +29,13 @@
       "when": 1792968364593,
       "tag": "0003_majestic_living_lightning",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792969288210,
+      "tag": "0004_young_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

@@ -23,14 +23,23 @@ export function telefoneWhatsapp(tel?: string | null) {
   return null;
 }
 
-export function mensagemWhatsapp(e: { cliente: string; tipo: TipoEntrega; competencia: string; titulo: string; url: string; vencimento?: string | null }) {
-  return [
-    `Olá! Segue ${e.tipo === "guia" ? "a guia" : "o documento"} de ${e.cliente}:`,
-    `${TIPOS[e.tipo]} · ${e.titulo}`,
-    `Competência: ${fmtCompetencia(e.competencia)}${e.vencimento ? ` · Vencimento: ${fmtData(e.vencimento)}` : ""}`,
-    e.url,
-    "— 4S Contábil",
-  ].join("\n");
+// Monta a mensagem a partir do modelo do escritório. Marcadores: {documento} {cliente} {tipo} {titulo}
+// {competencia} {vencimento} {link} {escritorio}
+export function mensagemWhatsapp(
+  modelo: string,
+  e: { escritorio: string; cliente: string; tipo: TipoEntrega; competencia: string; titulo: string; url: string; vencimento?: string | null },
+) {
+  const valores: Record<string, string> = {
+    documento: e.tipo === "guia" ? "a guia" : "o documento",
+    cliente: e.cliente,
+    tipo: TIPOS[e.tipo],
+    titulo: e.titulo,
+    competencia: fmtCompetencia(e.competencia),
+    vencimento: e.vencimento ? ` · Vencimento: ${fmtData(e.vencimento)}` : "",
+    link: e.url,
+    escritorio: e.escritorio,
+  };
+  return modelo.replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m));
 }
 
 export const linkWhatsapp = (telefone: string | null | undefined, texto: string) =>

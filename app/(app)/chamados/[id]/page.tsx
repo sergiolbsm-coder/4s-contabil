@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { chamadoEventos, chamados, clientes, usuarios } from "@/db/schema";
+import { chamadoEventos, clientes, usuarios } from "@/db/schema";
+import { chamadoDoEscritorio } from "@/lib/guards";
 import { exigirUsuario } from "@/lib/session";
 import { homePara, podeVerClientes } from "@/lib/papeis";
 import { CANAIS, CATEGORIAS, PRIORIDADES, STATUS, estourado } from "@/lib/chamados";
@@ -18,11 +19,11 @@ export default async function ChamadoDetalhe({ params }: { params: Promise<{ id:
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
-  const [c] = await db.select().from(chamados).where(eq(chamados.id, id));
+  const c = await chamadoDoEscritorio(u.escritorio.id, id);
   if (!c) notFound();
   const [[cli], equipe, eventos] = await Promise.all([
     db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).where(eq(clientes.id, c.clienteId)),
-    db.select({ id: usuarios.id, nome: usuarios.nome, papel: usuarios.papel }).from(usuarios).where(eq(usuarios.ativo, 1)),
+    db.select({ id: usuarios.id, nome: usuarios.nome, papel: usuarios.papel }).from(usuarios).where(and(eq(usuarios.escritorioId, u.escritorio.id), eq(usuarios.ativo, 1))),
     db.select({ id: chamadoEventos.id, tipo: chamadoEventos.tipo, texto: chamadoEventos.texto, criadoEm: chamadoEventos.criadoEm, autor: usuarios.nome })
       .from(chamadoEventos).leftJoin(usuarios, eq(usuarios.id, chamadoEventos.usuarioId))
       .where(eq(chamadoEventos.chamadoId, id)).orderBy(asc(chamadoEventos.criadoEm)),
@@ -50,7 +51,7 @@ export default async function ChamadoDetalhe({ params }: { params: Promise<{ id:
           <option value="">Sem responsável</option>
           {internos.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
-        <button className="rounded bg-slate-900 px-3 py-1 text-white">Atualizar</button>
+        <button className="rounded bg-brand px-3 py-1 text-white">Atualizar</button>
       </form>
 
       <section>
@@ -65,7 +66,7 @@ export default async function ChamadoDetalhe({ params }: { params: Promise<{ id:
         </ul>
         <form action={comentarChamado.bind(null, id)} className="flex gap-2">
           <textarea name="texto" rows={2} required placeholder="Adicionar comentário" className={`${campo} flex-1`} />
-          <button className="self-start rounded bg-slate-900 px-3 py-1 text-sm text-white">Comentar</button>
+          <button className="self-start rounded bg-brand px-3 py-1 text-sm text-white">Comentar</button>
         </form>
       </section>
     </div>

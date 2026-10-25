@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { chamados, clientes } from "@/db/schema";
@@ -21,7 +21,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
     })
     .from(chamados)
     .innerJoin(clientes, eq(clientes.id, chamados.clienteId));
-  const lista = await (todos ? q : q.where(ne(chamados.status, "resolvido"))).orderBy(chamados.prazoSla).limit(200);
+  const lista = await q.where(todos ? eq(chamados.escritorioId, u.escritorio.id) : and(eq(chamados.escritorioId, u.escritorio.id), ne(chamados.status, "resolvido"))).orderBy(chamados.prazoSla).limit(200);
   const atrasados = lista.filter((c) => estourado(c.prazoSla, c.status)).length;
 
   return (
@@ -33,7 +33,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
         </div>
         <div className="flex items-center gap-3 text-sm">
           <Link href={todos ? "/chamados" : "/chamados?todos=1"} className="underline">{todos ? "Só em aberto" : "Ver resolvidos"}</Link>
-          <Link href="/chamados/novo" className="rounded bg-slate-900 px-3 py-2 text-white">Novo chamado</Link>
+          <Link href="/chamados/novo" className="rounded bg-brand px-3 py-2 text-white">Novo chamado</Link>
         </div>
       </div>
       <div className="overflow-x-auto rounded-xl border bg-white">

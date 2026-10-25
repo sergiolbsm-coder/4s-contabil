@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { auditoria, chamadoEventos, chamados, usuarios } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { podeVerClientes } from "@/lib/papeis";
 import { CANAIS, CATEGORIAS, PRIORIDADES, STATUS, calcularPrazo } from "@/lib/chamados";
+import { chamadoDoEscritorio, clienteDoEscritorio, idValido, usuarioDoEscritorio } from "@/lib/guards";
 
 type Estado = { erro?: string } | undefined;
 
@@ -32,29 +33,35 @@ export async function abrirChamado(_p: Estado, form: FormData): Promise<Estado> 
   const u = await exigirEquipe();
   const r = novoSchema.safeParse(Object.fromEntries(form));
   if (!r.success) return { erro: r.error.issues[0].message };
+  if (!(await clienteDoEscritorio(u.escritorio.id, r.data.clienteId))) return { erro: "Cliente não encontrado." };
+
   const [c] = await db.insert(chamados).values({
     ...r.data,
+    escritorioId: u.escritorio.id,
     responsavelId: u.id,
-    prazoSla: calcularPrazo(r.data.categoria, r.data.prioridade),
+    prazoSla: calcularPrazo(r.data.categoria, r.data.prioridade, u.escritorio.config.sla),
   }).returning({ id: chamados.id });
   await db.insert(chamadoEventos).values({ chamadoId: c.id, usuarioId: u.id, tipo: "abertura", texto: "Chamado aberto" });
-  await db.insert(auditoria).values({ usuarioId: u.id, acao: "abrir", entidade: "chamado", entidadeId: c.id });
+  await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: "abrir", entidade: "chamado", entidadeId: c.id });
   redirect(`/chamados/${c.id}`);
 }
 
 export async function atualizarChamado(id: string, form: FormData) {
   const u = await exigirEquipe();
+  if (!idValido(id)) return;
   const status = String(form.get("status")) as keyof typeof STATUS;
-  const responsavelId = String(form.get("responsavelId") ?? "") || null;
+  let responsavelId = String(form.get("responsavelId") ?? "") || null;
   if (!(status in STATUS)) return;
-  const [atual] = await db.select().from(chamados).where(eq(chamados.id, id));
+  const atual = await chamadoDoEscritorio(u.escritorio.id, id);
   if (!atual) return;
+  // responsável só pode ser alguém do mesmo escritório
+  if (responsavelId && !(idValido(responsavelId) && (await usuarioDoEscritorio(u.escritorio.id, responsavelId)))) responsavelId = atual.responsavelId;
 
   await db.update(chamados).set({
     status,
     responsavelId,
     resolvidoEm: status === "resolvido" ? (atual.resolvidoEm ?? new Date()) : null,
-  }).where(eq(chamados.id, id));
+  }).where(and(eq(chamados.id, id), eq(chamados.escritorioId, u.escritorio.id)));
 
   const eventos: string[] = [];
   if (status !== atual.status) eventos.push(`Status: ${STATUS[atual.status]} → ${STATUS[status]}`);
@@ -71,6 +78,7 @@ export async function atualizarChamado(id: string, form: FormData) {
 
 export async function comentarChamado(id: string, form: FormData) {
   const u = await exigirEquipe();
+  if (!idValido(id) || !(await chamadoDoEscritorio(u.escritorio.id, id))) return;
   const texto = String(form.get("texto") ?? "").trim();
   if (!texto) return;
   await db.insert(chamadoEventos).values({ chamadoId: id, usuarioId: u.id, tipo: "comentario", texto });

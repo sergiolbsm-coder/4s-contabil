@@ -9,17 +9,6 @@ export const ETAPAS = [
   { chave: "contrato", titulo: "Contrato e ativação" },
 ] as const;
 
-export const DOCUMENTOS_PADRAO = [
-  "Contrato social / requerimento de empresário",
-  "Cartão CNPJ",
-  "Certificado digital (A1/A3)",
-  "Documentos dos sócios",
-  "Acessos (prefeitura, Sefaz, e-CAC)",
-  "Extratos bancários do período",
-  "Notas fiscais emitidas e recebidas",
-  "Folha de pagamento / lista de funcionários",
-];
-
 export const PERGUNTAS_DIAGNOSTICO = [
   { chave: "sistemas", texto: "Quais sistemas a empresa usa hoje (ERP, emissor de notas, banco)?" },
   { chave: "situacao_fiscal", texto: "Há pendências fiscais, parcelamentos ou débitos conhecidos?" },

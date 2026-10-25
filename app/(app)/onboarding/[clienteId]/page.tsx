@@ -1,7 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { clientes, diagnosticos, onboardingDocumentos, onboardingEtapas, onboardings } from "@/db/schema";
+import { clienteDoEscritorio } from "@/lib/guards";
+import { diagnosticos, onboardingDocumentos, onboardingEtapas, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import { ETAPA_STATUS, PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
@@ -17,7 +18,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(clienteId)) notFound();
 
-  const [c] = await db.select().from(clientes).where(eq(clientes.id, clienteId));
+  const c = await clienteDoEscritorio(u.escritorio.id, clienteId);
   const [o] = await db.select().from(onboardings).where(eq(onboardings.clienteId, clienteId));
   if (!c || !o) notFound();
 
@@ -49,7 +50,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                 </select>
                 <input name="prazo" type="date" defaultValue={e.prazo ?? ""} disabled={!edita} className={campo} />
                 <input name="notas" placeholder="Notas" defaultValue={e.notas ?? ""} disabled={!edita} className={`${campo} flex-1`} />
-                {edita && <button className="rounded bg-slate-900 px-3 py-1 text-white">Salvar</button>}
+                {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar</button>}
               </form>
             </li>
           ))}
@@ -64,7 +65,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
               <textarea name={p.chave} rows={2} defaultValue={respostas[p.chave] ?? ""} disabled={!edita} className="mt-1 w-full rounded border px-2 py-1" />
             </label>
           ))}
-          {edita && <button className="rounded bg-slate-900 px-3 py-1 text-white">Salvar diagnóstico</button>}
+          {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar diagnóstico</button>}
         </form>
       </section>
 
@@ -87,7 +88,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
         {edita && (
           <form action={adicionarDocumento.bind(null, clienteId)} className="flex gap-2">
             <input name="nome" placeholder="Outro documento" required className={`${campo} flex-1`} />
-            <button className="rounded bg-slate-900 px-3 py-1 text-sm text-white">Adicionar</button>
+            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
           </form>
         )}
       </section>

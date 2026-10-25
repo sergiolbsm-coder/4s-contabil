@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { usuarios } from "@/db/schema";
+import { escritorios, usuarios } from "@/db/schema";
 import { criarSessao, encerrarSessao, exigirUsuario } from "@/lib/session";
 import { homePara } from "@/lib/papeis";
 
@@ -18,10 +18,17 @@ export async function entrar(_prev: { erro?: string } | undefined, form: FormDat
   });
   if (!parsed.success) return { erro: "Informe e-mail e senha." };
 
-  const [u] = await db.select().from(usuarios).where(eq(usuarios.email, parsed.data.email)).limit(1);
+  const [row] = await db
+    .select({ u: usuarios, ativoEscritorio: escritorios.ativo })
+    .from(usuarios)
+    .innerJoin(escritorios, eq(escritorios.id, usuarios.escritorioId))
+    .where(eq(usuarios.email, parsed.data.email))
+    .limit(1);
+  const u = row?.u;
   // compara sempre, para não revelar se o e-mail existe
   const ok = await bcrypt.compare(parsed.data.senha, u?.senhaHash ?? "$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidi");
   if (!u || !u.ativo || !ok) return { erro: "E-mail ou senha inválidos." };
+  if (!row.ativoEscritorio) return { erro: "O acesso deste escritório está suspenso. Fale com o suporte." };
 
   await criarSessao(u.id);
   redirect(u.trocarSenha ? "/trocar-senha" : homePara(u.papel));

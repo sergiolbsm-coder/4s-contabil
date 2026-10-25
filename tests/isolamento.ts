@@ -1,0 +1,84 @@
+// Teste de isolamento entre escritórios: cria 2 escritórios de teste, dados em cada um e confere,
+// por HTTP, que o usuário de A nunca enxerga nem altera dados de B. Remove tudo no fim.
+// Uso: npm run build && npm start  (outro terminal)  →  npx tsx tests/isolamento.ts
+import * as dotenv from "dotenv";
+import { createHash, randomBytes } from "node:crypto";
+dotenv.config({ path: ".env.local" });
+
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+let falhas = 0;
+const confere = (nome: string, ok: boolean, detalhe = "") => {
+  console.log(`${ok ? "✓" : "✗"} ${nome}${detalhe ? ` — ${detalhe}` : ""}`);
+  if (!ok) falhas++;
+};
+
+async function main() {
+  const { db } = await import("@/lib/db");
+  const S = await import("@/db/schema");
+  const { eq, inArray } = await import("drizzle-orm");
+
+  const sufixo = randomBytes(3).toString("hex");
+  const novoEsc = async (n: string) => (await db.insert(S.escritorios).values({ nome: `ZZ Teste ${n}`, slug: `zz-teste-${n.toLowerCase()}-${sufixo}` }).returning())[0];
+  const A = await novoEsc("A");
+  const B = await novoEsc("B");
+
+  const sessao = async (escritorioId: string, papel: "admin" | "cliente", clienteId?: string) => {
+    const [u] = await db.insert(S.usuarios).values({ nome: `ZZ ${papel}`, email: `zz-${randomBytes(4).toString("hex")}@example.com`, senhaHash: "x", papel, escritorioId, clienteId: clienteId ?? null }).returning();
+    const token = randomBytes(32).toString("hex");
+    await db.insert(S.sessoes).values({ usuarioId: u.id, tokenHash: createHash("sha256").update(token).digest("hex"), expiraEm: new Date(Date.now() + 600_000) });
+    return { u, token };
+  };
+
+  const [cA] = await db.insert(S.clientes).values({ escritorioId: A.id, razaoSocial: "ZZ Cliente da A" }).returning();
+  const [cB] = await db.insert(S.clientes).values({ escritorioId: B.id, razaoSocial: "ZZ Cliente da B" }).returning();
+  await db.insert(S.contatos).values({ clienteId: cB.id, nome: "Contato B", email: "b@example.com", telefone: "11912345678", principal: 1 });
+  const [chB] = await db.insert(S.chamados).values({ escritorioId: B.id, clienteId: cB.id, titulo: "ZZ Chamado da B", prazoSla: new Date() }).returning();
+  const [enB] = await db.insert(S.entregas).values({ escritorioId: B.id, clienteId: cB.id, competencia: "2026-10", titulo: "ZZ Guia da B", url: "https://example.com/b" }).returning();
+  const [onbB] = await db.insert(S.onboardings).values({ clienteId: cB.id }).returning();
+  const admA = await sessao(A.id, "admin");
+  const admB = await sessao(B.id, "admin");
+  const cliB = await sessao(B.id, "cliente", cB.id);
+
+  const get = (path: string, token: string) => fetch(BASE + path, { headers: { Cookie: `session_token=${token}` }, redirect: "manual" });
+  const texto = async (path: string, token: string) => (await get(path, token)).text();
+
+  try {
+    // 1) leitura direta por id de outro escritório → 404
+    for (const [rotulo, path] of [
+      ["ficha do cliente", `/clientes/${cB.id}`], ["onboarding do cliente", `/onboarding/${cB.id}`], ["chamado", `/chamados/${chB.id}`],
+    ] as const) confere(`A não abre ${rotulo} da B`, (await get(path, admA.token)).status === 404);
+    confere("A não aciona WhatsApp de entrega da B", (await get(`/entregas/${enB.id}/whatsapp`, admA.token)).status === 404);
+    confere("dono (B) abre a própria ficha", (await get(`/clientes/${cB.id}`, admB.token)).status === 200);
+    confere("dono (B) abre o próprio WhatsApp", (await get(`/entregas/${enB.id}/whatsapp`, admB.token)).status === 307);
+
+    // 2) listagens não vazam
+    for (const path of ["/clientes", "/chamados?todos=1", "/entregas", "/onboarding", "/usuarios", "/chamados/novo", "/entregas/nova"]) {
+      const html = await texto(path, admA.token);
+      confere(`lista ${path} da A não mostra dados da B`, !html.includes("ZZ Cliente da B") && !html.includes("ZZ Chamado da B") && !html.includes("ZZ Guia da B") && !html.includes("ZZ Teste B"));
+    }
+    confere("lista da A mostra o próprio cliente", (await texto("/clientes", admA.token)).includes("ZZ Cliente da A"));
+    confere("lista da B mostra o próprio cliente", (await texto("/clientes", admB.token)).includes("ZZ Cliente da B"));
+
+    // 3) cliente (portal) só abre o que é da própria empresa
+    confere("portal do cliente B abre o documento", (await get(`/portal/abrir/${enB.id}`, cliB.token)).status === 307);
+    const cliA = await sessao(A.id, "cliente", cA.id);
+    confere("cliente da A não abre documento da B", (await get(`/portal/abrir/${enB.id}`, cliA.token)).status === 404);
+
+    // 4) áreas restritas
+    confere("admin comum não entra em /plataforma", (await get("/plataforma", admA.token)).status === 307);
+    confere("cliente não entra em /configuracoes", (await get("/configuracoes", cliB.token)).status === 307);
+    confere("onboarding da B existe para a B", (await get(`/onboarding/${cB.id}`, admB.token)).status === 200);
+    void onbB;
+  } finally {
+    const escIds = [A.id, B.id];
+    await db.delete(S.sessoes).where(inArray(S.sessoes.usuarioId, (await db.select({ id: S.usuarios.id }).from(S.usuarios).where(inArray(S.usuarios.escritorioId, escIds))).map((x) => x.id)));
+    await db.delete(S.auditoria).where(inArray(S.auditoria.escritorioId, escIds));
+    await db.delete(S.usuarios).where(inArray(S.usuarios.escritorioId, escIds));
+    await db.delete(S.clientes).where(inArray(S.clientes.escritorioId, escIds)); // cascata: contatos, chamados, entregas, onboarding
+    await db.delete(S.escritorios).where(inArray(S.escritorios.id, escIds));
+    void eq;
+  }
+  console.log(falhas === 0 ? "\nTODOS OS TESTES PASSARAM" : `\n${falhas} FALHA(S)`);
+  process.exit(falhas === 0 ? 0 : 1);
+}
+main().catch((e) => { console.error(e); process.exit(1); });

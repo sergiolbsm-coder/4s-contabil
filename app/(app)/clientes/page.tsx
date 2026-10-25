@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes } from "@/db/schema";
@@ -17,14 +17,14 @@ function diasAte(data: string | null) {
 export default async function Clientes() {
   const u = await exigirUsuario();
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
-  const lista = await db.select().from(clientes).orderBy(desc(clientes.criadoEm));
+  const lista = await db.select().from(clientes).where(eq(clientes.escritorioId, u.escritorio.id)).orderBy(desc(clientes.criadoEm));
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Clientes</h1>
         {podeEditarClientes(u.papel) && (
-          <Link href="/clientes/novo" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">Novo cliente</Link>
+          <Link href="/clientes/novo" className="rounded bg-brand px-3 py-2 text-sm text-white">Novo cliente</Link>
         )}
       </div>
       <div className="overflow-x-auto rounded-xl border bg-white">

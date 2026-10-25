@@ -18,8 +18,8 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
     db.select({
       id: usuarios.id, nome: usuarios.nome, email: usuarios.email, papel: usuarios.papel, ativo: usuarios.ativo,
       trocarSenha: usuarios.trocarSenha, empresa: clientes.razaoSocial,
-    }).from(usuarios).leftJoin(clientes, eq(clientes.id, usuarios.clienteId)).orderBy(asc(usuarios.papel), asc(usuarios.nome)),
-    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).orderBy(asc(clientes.razaoSocial)),
+    }).from(usuarios).leftJoin(clientes, eq(clientes.id, usuarios.clienteId)).where(eq(usuarios.escritorioId, u.escritorio.id)).orderBy(asc(usuarios.papel), asc(usuarios.nome)),
+    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).where(eq(clientes.escritorioId, u.escritorio.id)).orderBy(asc(clientes.razaoSocial)),
   ]);
   const clienteInicial = empresas.some((e) => e.id === cliente) ? cliente : undefined;
 

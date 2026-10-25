@@ -21,7 +21,7 @@ export default async function Entregas({
   const u = await exigirUsuario();
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
 
-  const filtros = [];
+  const filtros = [eq(entregas.escritorioId, u.escritorio.id)];
   if (f.competencia && /^\d{4}-\d{2}$/.test(f.competencia)) filtros.push(eq(entregas.competencia, f.competencia));
   if (f.cliente && /^[0-9a-f-]{36}$/.test(f.cliente)) filtros.push(eq(entregas.clienteId, f.cliente));
   if (f.tipo && f.tipo in TIPOS) filtros.push(eq(entregas.tipo, f.tipo as keyof typeof TIPOS));
@@ -32,9 +32,9 @@ export default async function Entregas({
       titulo: entregas.titulo, url: entregas.url, vencimento: entregas.vencimento, valorCentavos: entregas.valorCentavos,
       emailEnviadoEm: entregas.emailEnviadoEm, emailEnviadoPara: entregas.emailEnviadoPara, whatsappEm: entregas.whatsappEm, visualizadoEm: entregas.visualizadoEm,
     }).from(entregas).innerJoin(clientes, eq(clientes.id, entregas.clienteId))
-      .where(filtros.length ? and(...filtros) : undefined).orderBy(desc(entregas.competencia), asc(clientes.razaoSocial), desc(entregas.criadoEm)).limit(300),
-    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).orderBy(asc(clientes.razaoSocial)),
-    db.select({ clienteId: contatos.clienteId, email: contatos.email }).from(contatos).where(isNotNull(contatos.email)).orderBy(desc(contatos.principal)),
+      .where(and(...filtros)).orderBy(desc(entregas.competencia), asc(clientes.razaoSocial), desc(entregas.criadoEm)).limit(300),
+    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).where(eq(clientes.escritorioId, u.escritorio.id)).orderBy(asc(clientes.razaoSocial)),
+    db.select({ clienteId: contatos.clienteId, email: contatos.email }).from(contatos).innerJoin(clientes, eq(clientes.id, contatos.clienteId)).where(and(isNotNull(contatos.email), eq(clientes.escritorioId, u.escritorio.id))).orderBy(desc(contatos.principal)),
   ]);
   const emails: Record<string, string> = {};
   for (const c of cts) if (c.email && !emails[c.clienteId]) emails[c.clienteId] = c.email;
@@ -49,7 +49,7 @@ export default async function Entregas({
           <h1 className="text-xl font-semibold">Entregas mensais</h1>
           <p className="text-sm text-slate-500">{lista.length} registro(s) · {naoVistas} ainda não visualizada(s) no portal</p>
         </div>
-        <Link href="/entregas/nova" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">Nova entrega</Link>
+        <Link href="/entregas/nova" className="rounded bg-brand px-3 py-2 text-sm text-white">Nova entrega</Link>
       </div>
 
       {f.novo && <p className={`mb-3 rounded border p-2 text-sm ${f.aviso ? "border-amber-300 bg-amber-50 text-amber-800" : "border-emerald-300 bg-emerald-50"}`}>{f.aviso ?? "Entrega registrada."}</p>}

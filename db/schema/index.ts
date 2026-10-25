@@ -29,6 +29,28 @@ export const chamadoStatusEnum = pgEnum("chamado_status", ["aberto", "em_andamen
 
 export const entregaTipoEnum = pgEnum("entrega_tipo", ["guia", "demonstrativo", "outro"]);
 
+export type ConfigEscritorio = {
+  sla?: Partial<Record<"societario" | "fiscal" | "trabalhista" | "financeiro" | "outros", number>>; // horas
+  documentosPadrao?: string[];
+  mensagemWhatsapp?: string;
+};
+
+// Cada escritório contábil que usa o ContaHub. Todo dado de negócio pertence a um escritório.
+export const escritorios = pgTable("escritorios", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nome: varchar("nome", { length: 160 }).notNull(),
+  slug: varchar("slug", { length: 60 }).notNull().unique(),
+  dominio: varchar("dominio", { length: 200 }).unique(), // domínio próprio (opcional)
+  corPrimaria: varchar("cor_primaria", { length: 7 }).notNull().default("#0f172a"),
+  logoUrl: text("logo_url"),
+  emailRemetenteNome: varchar("email_remetente_nome", { length: 120 }),
+  emailRemetente: varchar("email_remetente", { length: 200 }),
+  emailResponderPara: varchar("email_responder_para", { length: 200 }),
+  config: jsonb("config").$type<ConfigEscritorio>().notNull().default({}),
+  ativo: boolean("ativo").notNull().default(true),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+});
+
 export const usuarios = pgTable("usuarios", {
   id: uuid("id").defaultRandom().primaryKey(),
   nome: varchar("nome", { length: 160 }).notNull(),
@@ -40,6 +62,9 @@ export const usuarios = pgTable("usuarios", {
   clienteId: uuid("cliente_id").references((): AnyPgColumn => clientes.id, { onDelete: "cascade" }),
   // Senha provisória: força a troca no primeiro acesso
   trocarSenha: boolean("trocar_senha").notNull().default(false),
+  escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+  // Gestão da plataforma ContaHub (criar escritórios); independe do papel dentro do escritório
+  superadmin: boolean("superadmin").notNull().default(false),
   criadoEm: timestamp("criado_em").defaultNow().notNull(),
 });
 
@@ -59,6 +84,7 @@ export const clientes = pgTable(
   "clientes",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
     razaoSocial: varchar("razao_social", { length: 200 }).notNull(),
     nomeFantasia: varchar("nome_fantasia", { length: 200 }),
     cnpj: varchar("cnpj", { length: 18 }),
@@ -71,7 +97,7 @@ export const clientes = pgTable(
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
     atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
   },
-  (t) => [index("clientes_status_idx").on(t.status)],
+  (t) => [index("clientes_status_idx").on(t.status), index("clientes_escritorio_idx").on(t.escritorioId)],
 );
 
 export const contatos = pgTable("contatos", {
@@ -101,6 +127,7 @@ export const auditoria = pgTable("auditoria", {
   acao: varchar("acao", { length: 80 }).notNull(),
   entidade: varchar("entidade", { length: 60 }).notNull(),
   entidadeId: uuid("entidade_id"),
+  escritorioId: uuid("escritorio_id").references(() => escritorios.id, { onDelete: "set null" }),
   criadoEm: timestamp("criado_em").defaultNow().notNull(),
 });
 
@@ -158,6 +185,7 @@ export const chamados = pgTable(
   "chamados",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
     numero: integer("numero").generatedAlwaysAsIdentity().notNull(),
     clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
     titulo: varchar("titulo", { length: 200 }).notNull(),
@@ -171,7 +199,7 @@ export const chamados = pgTable(
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
     resolvidoEm: timestamp("resolvido_em"),
   },
-  (t) => [index("chamados_status_idx").on(t.status), index("chamados_cliente_idx").on(t.clienteId)],
+  (t) => [index("chamados_status_idx").on(t.status), index("chamados_cliente_idx").on(t.clienteId), index("chamados_escritorio_idx").on(t.escritorioId)],
 );
 
 export const chamadoEventos = pgTable("chamado_eventos", {
@@ -188,6 +216,7 @@ export const entregas = pgTable(
   "entregas",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
     clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
     tipo: entregaTipoEnum("tipo").notNull().default("guia"),
     competencia: varchar("competencia", { length: 7 }).notNull(), // AAAA-MM
@@ -203,5 +232,5 @@ export const entregas = pgTable(
     whatsappEm: timestamp("whatsapp_em"),
     visualizadoEm: timestamp("visualizado_em"),
   },
-  (t) => [index("entregas_cliente_idx").on(t.clienteId), index("entregas_comp_idx").on(t.competencia)],
+  (t) => [index("entregas_cliente_idx").on(t.clienteId), index("entregas_comp_idx").on(t.competencia), index("entregas_escritorio_idx").on(t.escritorioId)],
 );

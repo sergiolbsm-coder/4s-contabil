@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { auditoria, sessoes, usuarios } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { ehAdmin } from "@/lib/papeis";
+import { clienteDoEscritorio, idValido, usuarioDoEscritorio } from "@/lib/guards";
 import { gerarSenhaTemporaria } from "@/lib/senha";
 import { enviarAcesso } from "@/lib/mail";
 
@@ -33,43 +34,46 @@ export async function criarUsuario(_p: EstadoUsuario, form: FormData): Promise<E
   if (!r.success) return { erro: r.error.issues[0].message };
   const d = r.data;
   if (d.papel === "cliente" && !d.clienteId) return { erro: "Selecione a empresa do login de cliente." };
+  if (d.papel === "cliente" && d.clienteId && !(await clienteDoEscritorio(admin.escritorio.id, d.clienteId))) return { erro: "Empresa não encontrada." };
 
   const [existe] = await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.email, d.email));
   if (existe) return { erro: "Já existe um usuário com esse e-mail." };
 
   const senha = gerarSenhaTemporaria();
   const [novo] = await db.insert(usuarios).values({
-    nome: d.nome, email: d.email, papel: d.papel,
+    nome: d.nome, email: d.email, papel: d.papel, escritorioId: admin.escritorio.id,
     clienteId: d.papel === "cliente" ? d.clienteId : null,
     senhaHash: await bcrypt.hash(senha, 10),
     trocarSenha: true,
   }).returning({ id: usuarios.id });
-  await db.insert(auditoria).values({ usuarioId: admin.id, acao: "criar", entidade: "usuario", entidadeId: novo.id });
+  await db.insert(auditoria).values({ usuarioId: admin.id, escritorioId: admin.escritorio.id, acao: "criar", entidade: "usuario", entidadeId: novo.id });
 
-  const mail = await enviarAcesso({ nome: d.nome, email: d.email, senhaTemporaria: senha });
+  const mail = await enviarAcesso(admin.escritorio, { nome: d.nome, email: d.email, senhaTemporaria: senha });
   revalidatePath("/usuarios");
   return { ok: { nome: d.nome, email: d.email, senha, emailEnviado: mail.sent } };
 }
 
 export async function redefinirSenha(id: string, _p: EstadoUsuario): Promise<EstadoUsuario> {
   const admin = await exigirAdmin();
-  const [u] = await db.select().from(usuarios).where(eq(usuarios.id, id));
+  if (!idValido(id)) return { erro: "Usuário não encontrado." };
+  const u = await usuarioDoEscritorio(admin.escritorio.id, id);
   if (!u) return { erro: "Usuário não encontrado." };
   const senha = gerarSenhaTemporaria();
   await db.update(usuarios).set({ senhaHash: await bcrypt.hash(senha, 10), trocarSenha: true }).where(eq(usuarios.id, id));
   await db.delete(sessoes).where(eq(sessoes.usuarioId, id)); // derruba sessões abertas
-  await db.insert(auditoria).values({ usuarioId: admin.id, acao: "redefinir_senha", entidade: "usuario", entidadeId: id });
-  const mail = await enviarAcesso({ nome: u.nome, email: u.email, senhaTemporaria: senha });
+  await db.insert(auditoria).values({ usuarioId: admin.id, escritorioId: admin.escritorio.id, acao: "redefinir_senha", entidade: "usuario", entidadeId: id });
+  const mail = await enviarAcesso(admin.escritorio, { nome: u.nome, email: u.email, senhaTemporaria: senha });
   return { ok: { nome: u.nome, email: u.email, senha, emailEnviado: mail.sent } };
 }
 
 export async function alternarAtivo(id: string) {
   const admin = await exigirAdmin();
   if (id === admin.id) return; // não se desativa
-  const [u] = await db.select({ ativo: usuarios.ativo }).from(usuarios).where(eq(usuarios.id, id));
+  if (!idValido(id)) return;
+  const u = await usuarioDoEscritorio(admin.escritorio.id, id);
   if (!u) return;
   await db.update(usuarios).set({ ativo: u.ativo ? 0 : 1 }).where(eq(usuarios.id, id));
   if (u.ativo) await db.delete(sessoes).where(eq(sessoes.usuarioId, id));
-  await db.insert(auditoria).values({ usuarioId: admin.id, acao: u.ativo ? "desativar" : "ativar", entidade: "usuario", entidadeId: id });
+  await db.insert(auditoria).values({ usuarioId: admin.id, escritorioId: admin.escritorio.id, acao: u.ativo ? "desativar" : "ativar", entidade: "usuario", entidadeId: id });
   revalidatePath("/usuarios");
 }

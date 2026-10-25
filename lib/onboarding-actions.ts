@@ -9,34 +9,38 @@ import {
 } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { podeEditarClientes } from "@/lib/papeis";
-import { DOCUMENTOS_PADRAO, ETAPAS, PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
+import { ETAPAS, PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
+import { documentosPadrao } from "@/lib/escritorio";
+import { clienteDoEscritorio, idValido } from "@/lib/guards";
 
-async function exigirEdicao() {
+// Exige edição e que o cliente seja do escritório do usuário
+async function exigirEdicaoNoCliente(clienteId: string) {
   const u = await exigirUsuario();
   if (!podeEditarClientes(u.papel)) throw new Error("Sem permissão");
+  if (!idValido(clienteId) || !(await clienteDoEscritorio(u.escritorio.id, clienteId))) throw new Error("Cliente não encontrado");
   return u;
 }
 
 const atualizar = (clienteId: string) => revalidatePath(`/onboarding/${clienteId}`);
 
 export async function iniciarOnboarding(clienteId: string) {
-  const u = await exigirEdicao();
+  const u = await exigirEdicaoNoCliente(clienteId);
   const [existente] = await db.select({ id: onboardings.id }).from(onboardings).where(eq(onboardings.clienteId, clienteId));
   if (!existente) {
     const [o] = await db.insert(onboardings).values({ clienteId }).returning({ id: onboardings.id });
     await db.insert(onboardingEtapas).values(
       ETAPAS.map((e, i) => ({ onboardingId: o.id, chave: e.chave, ordem: i + 1, titulo: e.titulo, responsavelId: u.id })),
     );
-    await db.insert(onboardingDocumentos).values(DOCUMENTOS_PADRAO.map((nome) => ({ onboardingId: o.id, nome })));
+    await db.insert(onboardingDocumentos).values(documentosPadrao(u.escritorio).map((nome) => ({ onboardingId: o.id, nome })));
     await db.insert(diagnosticos).values({ onboardingId: o.id });
     await db.update(clientes).set({ status: "onboarding", atualizadoEm: new Date() }).where(eq(clientes.id, clienteId));
-    await db.insert(auditoria).values({ usuarioId: u.id, acao: "iniciar", entidade: "onboarding", entidadeId: o.id });
+    await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: "iniciar", entidade: "onboarding", entidadeId: o.id });
   }
   redirect(`/onboarding/${clienteId}`);
 }
 
 export async function atualizarEtapa(clienteId: string, etapaId: string, form: FormData) {
-  const u = await exigirEdicao();
+  const u = await exigirEdicaoNoCliente(clienteId);
   const status = String(form.get("status"));
   if (!["pendente", "em_andamento", "concluida"].includes(status)) return;
 
@@ -61,12 +65,12 @@ export async function atualizarEtapa(clienteId: string, etapaId: string, form: F
       .where(eq(clientes.id, clienteId));
     revalidatePath("/clientes");
   }
-  await db.insert(auditoria).values({ usuarioId: u.id, acao: `etapa_${status}`, entidade: "onboarding_etapa", entidadeId: etapaId });
+  await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: `etapa_${status}`, entidade: "onboarding_etapa", entidadeId: etapaId });
   atualizar(clienteId);
 }
 
 export async function alternarDocumento(clienteId: string, docId: string) {
-  await exigirEdicao();
+  await exigirEdicaoNoCliente(clienteId);
   const [d] = await db
     .select({ id: onboardingDocumentos.id, recebido: onboardingDocumentos.recebido })
     .from(onboardingDocumentos)
@@ -80,7 +84,7 @@ export async function alternarDocumento(clienteId: string, docId: string) {
 }
 
 export async function adicionarDocumento(clienteId: string, form: FormData) {
-  await exigirEdicao();
+  await exigirEdicaoNoCliente(clienteId);
   const nome = String(form.get("nome") ?? "").trim();
   const [o] = await db.select({ id: onboardings.id }).from(onboardings).where(eq(onboardings.clienteId, clienteId));
   if (!nome || !o) return;
@@ -89,7 +93,7 @@ export async function adicionarDocumento(clienteId: string, form: FormData) {
 }
 
 export async function salvarDiagnostico(clienteId: string, form: FormData) {
-  await exigirEdicao();
+  await exigirEdicaoNoCliente(clienteId);
   const [o] = await db.select({ id: onboardings.id }).from(onboardings).where(eq(onboardings.clienteId, clienteId));
   if (!o) return;
   const respostas: Record<string, string> = {};

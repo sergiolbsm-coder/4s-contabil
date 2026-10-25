@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Cor da marca do escritório: definida por --brand no contêiner da página (padrão: slate-900) */
+@theme inline {
+  --color-brand: var(--brand, #0f172a);
+}

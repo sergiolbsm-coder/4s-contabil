@@ -21,7 +21,7 @@ export function AcoesEntrega({ id, url, emailPadrao }: { id: string; url: string
       {aberto && (
         <form action={action} className="flex flex-wrap gap-1">
           <input name="para" type="email" required defaultValue={emailPadrao} placeholder="e-mail do cliente" className="min-w-0 flex-1 rounded border px-2 py-1" />
-          <button disabled={pending} className="rounded bg-slate-900 px-2 py-1 text-white disabled:opacity-60">{pending ? "…" : "Enviar"}</button>
+          <button disabled={pending} className="rounded bg-brand px-2 py-1 text-white disabled:opacity-60">{pending ? "…" : "Enviar"}</button>
         </form>
       )}
       {state?.erro && <p className="text-xs text-red-600">{state.erro}</p>}

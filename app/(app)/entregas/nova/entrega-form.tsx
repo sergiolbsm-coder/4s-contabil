@@ -47,7 +47,7 @@ export function EntregaForm({
         </label>
       )}
       {state?.erro && <p className="text-sm text-red-600 sm:col-span-2">{state.erro}</p>}
-      <button disabled={pending} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Salvando…" : "Registrar entrega"}</button>
+      <button disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Salvando…" : "Registrar entrega"}</button>
     </form>
   );
 }

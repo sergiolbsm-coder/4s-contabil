@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, entregas } from "@/db/schema";
@@ -15,8 +15,8 @@ export default async function Portal() {
   if (u.papel !== "cliente" || !u.clienteId) redirect(homePara(u.papel));
 
   const [[c], lista] = await Promise.all([
-    db.select({ razaoSocial: clientes.razaoSocial }).from(clientes).where(eq(clientes.id, u.clienteId)),
-    db.select().from(entregas).where(eq(entregas.clienteId, u.clienteId)).orderBy(desc(entregas.competencia), desc(entregas.criadoEm)),
+    db.select({ razaoSocial: clientes.razaoSocial }).from(clientes).where(and(eq(clientes.id, u.clienteId), eq(clientes.escritorioId, u.escritorio.id))),
+    db.select().from(entregas).where(and(eq(entregas.clienteId, u.clienteId), eq(entregas.escritorioId, u.escritorio.id))).orderBy(desc(entregas.competencia), desc(entregas.criadoEm)),
   ]);
 
   const porMes = new Map<string, typeof lista>();
@@ -40,7 +40,7 @@ export default async function Portal() {
                   <div className="text-xs text-slate-500">{TIPOS[e.tipo]}{e.vencimento && ` · vence em ${fmtData(e.vencimento)}`}{e.valorCentavos != null && ` · ${moeda(e.valorCentavos)}`}</div>
                   {e.observacao && <div className="mt-1 text-xs text-slate-600">{e.observacao}</div>}
                 </div>
-                <a href={`/portal/abrir/${e.id}`} target="_blank" rel="noopener noreferrer" className="rounded bg-slate-900 px-3 py-1 text-white">Abrir</a>
+                <a href={`/portal/abrir/${e.id}`} target="_blank" rel="noopener noreferrer" className="rounded bg-brand px-3 py-1 text-white">Abrir</a>
               </li>
             ))}
           </ul>

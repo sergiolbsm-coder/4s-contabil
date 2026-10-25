@@ -3,8 +3,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { sessoes, usuarios } from "@/db/schema";
+import { escritorios, sessoes, usuarios } from "@/db/schema";
 import type { Papel } from "@/lib/papeis";
+import type { Escritorio } from "@/lib/escritorio";
 
 const COOKIE = "session_token";
 const DIAS = 7;
@@ -31,19 +32,39 @@ export async function encerrarSessao() {
   jar.delete(COOKIE);
 }
 
-export type Usuario = { id: string; nome: string; email: string; papel: Papel; clienteId: string | null; trocarSenha: boolean };
+export type Usuario = {
+  id: string;
+  nome: string;
+  email: string;
+  papel: Papel;
+  clienteId: string | null;
+  trocarSenha: boolean;
+  superadmin: boolean;
+  escritorio: Escritorio;
+};
 
+// Usuário da sessão + escritório a que pertence. Usuário ou escritório desativado = sem sessão.
 export async function usuarioAtual(): Promise<Usuario | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const [row] = await db
-    .select({ id: usuarios.id, nome: usuarios.nome, email: usuarios.email, papel: usuarios.papel, ativo: usuarios.ativo, clienteId: usuarios.clienteId, trocarSenha: usuarios.trocarSenha })
+    .select({ u: usuarios, e: escritorios })
     .from(sessoes)
     .innerJoin(usuarios, eq(usuarios.id, sessoes.usuarioId))
+    .innerJoin(escritorios, eq(escritorios.id, usuarios.escritorioId))
     .where(and(eq(sessoes.tokenHash, hash(token)), gt(sessoes.expiraEm, new Date())))
     .limit(1);
-  if (!row || !row.ativo) return null;
-  return { id: row.id, nome: row.nome, email: row.email, papel: row.papel, clienteId: row.clienteId, trocarSenha: row.trocarSenha };
+  if (!row || !row.u.ativo || !row.e.ativo) return null;
+  const { u, e } = row;
+  return {
+    id: u.id, nome: u.nome, email: u.email, papel: u.papel, clienteId: u.clienteId,
+    trocarSenha: u.trocarSenha, superadmin: u.superadmin,
+    escritorio: {
+      id: e.id, nome: e.nome, slug: e.slug, dominio: e.dominio, corPrimaria: e.corPrimaria, logoUrl: e.logoUrl,
+      emailRemetenteNome: e.emailRemetenteNome, emailRemetente: e.emailRemetente, emailResponderPara: e.emailResponderPara,
+      config: e.config ?? {},
+    },
+  };
 }
 
 export async function exigirUsuario(): Promise<Usuario> {

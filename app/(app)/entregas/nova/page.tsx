@@ -1,4 +1,4 @@
-import { and, asc, desc, isNotNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, contatos } from "@/db/schema";
@@ -15,8 +15,8 @@ export default async function NovaEntrega({ searchParams }: { searchParams: Prom
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
 
   const [lista, cts] = await Promise.all([
-    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).where(ne(clientes.status, "inativo")).orderBy(asc(clientes.razaoSocial)),
-    db.select({ clienteId: contatos.clienteId, email: contatos.email }).from(contatos).where(and(isNotNull(contatos.email))).orderBy(desc(contatos.principal)),
+    db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial }).from(clientes).where(and(eq(clientes.escritorioId, u.escritorio.id), ne(clientes.status, "inativo"))).orderBy(asc(clientes.razaoSocial)),
+    db.select({ clienteId: contatos.clienteId, email: contatos.email }).from(contatos).innerJoin(clientes, eq(clientes.id, contatos.clienteId)).where(and(isNotNull(contatos.email), eq(clientes.escritorioId, u.escritorio.id))).orderBy(desc(contatos.principal)),
   ]);
   const emails: Record<string, string> = {};
   for (const c of cts) if (c.email && !emails[c.clienteId]) emails[c.clienteId] = c.email;
