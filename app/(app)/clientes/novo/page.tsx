@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/session";
-import { podeEditarClientes } from "@/lib/papeis";
+import { homePara, podeEditarClientes } from "@/lib/papeis";
 import { criarCliente } from "@/lib/clientes-actions";
 import { ClienteForm } from "../cliente-form";
 

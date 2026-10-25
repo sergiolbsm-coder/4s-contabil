@@ -14,3 +14,11 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      - key: APP_URL
+        value: https://fours-contabil.onrender.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_REPLY_TO
+        sync: false

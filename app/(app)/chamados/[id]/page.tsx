@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { chamadoEventos, chamados, clientes, usuarios } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeVerClientes } from "@/lib/papeis";
+import { homePara, podeVerClientes } from "@/lib/papeis";
 import { CANAIS, CATEGORIAS, PRIORIDADES, STATUS, estourado } from "@/lib/chamados";
 import { atualizarChamado, comentarChamado } from "@/lib/chamados-actions";
 
@@ -15,7 +15,7 @@ const campo = "rounded border px-2 py-1 text-sm";
 export default async function ChamadoDetalhe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
   const [c] = await db.select().from(chamados).where(eq(chamados.id, id));

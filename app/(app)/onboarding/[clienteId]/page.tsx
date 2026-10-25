@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, diagnosticos, onboardingDocumentos, onboardingEtapas, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeEditarClientes, podeVerClientes } from "@/lib/papeis";
+import { homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import { ETAPA_STATUS, PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
 import { adicionarDocumento, alternarDocumento, atualizarEtapa, salvarDiagnostico } from "@/lib/onboarding-actions";
 
@@ -14,7 +14,7 @@ const campo = "rounded border px-2 py-1 text-sm";
 export default async function OnboardingCliente({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = await params;
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(clienteId)) notFound();
 
   const [c] = await db.select().from(clientes).where(eq(clientes.id, clienteId));

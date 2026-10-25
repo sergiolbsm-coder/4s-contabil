@@ -4,13 +4,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, onboardingEtapas, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeVerClientes } from "@/lib/papeis";
+import { homePara, podeVerClientes } from "@/lib/papeis";
 
 export const dynamic = "force-dynamic";
 
 export default async function PainelOnboarding() {
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
 
   const linhas = await db
     .select({

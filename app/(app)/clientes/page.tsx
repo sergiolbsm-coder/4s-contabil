@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeEditarClientes, podeVerClientes } from "@/lib/papeis";
+import { homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import { SOLUCOES, STATUS } from "@/lib/rotulos-cliente";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ function diasAte(data: string | null) {
 
 export default async function Clientes() {
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   const lista = await db.select().from(clientes).orderBy(desc(clientes.criadoEm));
 
   return (

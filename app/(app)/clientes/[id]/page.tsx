@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes, contatos, contratos, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeEditarClientes, podeVerClientes } from "@/lib/papeis";
+import { ehAdmin, homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import Link from "next/link";
 import { iniciarOnboarding } from "@/lib/onboarding-actions";
 import { adicionarContato, adicionarContrato, atualizarCliente, removerContato } from "@/lib/clientes-actions";
@@ -17,7 +17,7 @@ const moeda = (c: number | null) => (c == null ? "—" : (c / 100).toLocaleStrin
 export default async function ClienteDetalhe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
 
   const [c] = await db.select().from(clientes).where(eq(clientes.id, id)).limit(1);
@@ -32,6 +32,12 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold">{c.razaoSocial}</h1>
+
+      <div className="flex flex-wrap gap-4 text-sm">
+        <Link href={`/entregas/nova?cliente=${id}`} className="underline">Nova entrega (guia/demonstrativo)</Link>
+        <Link href={`/entregas?cliente=${id}`} className="underline">Ver entregas</Link>
+        {ehAdmin(u.papel) && <Link href={`/usuarios?cliente=${id}`} className="underline">Criar acesso do cliente</Link>}
+      </div>
 
       {onb ? (
         <Link href={`/onboarding/${id}`} className="inline-block text-sm underline">Ver onboarding →</Link>

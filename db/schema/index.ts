@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   date,
   index,
   boolean,
@@ -26,6 +27,8 @@ export const chamadoPrioridadeEnum = pgEnum("chamado_prioridade", ["baixa", "nor
 export const chamadoCanalEnum = pgEnum("chamado_canal", ["whatsapp", "email", "telefone", "portal", "presencial"]);
 export const chamadoStatusEnum = pgEnum("chamado_status", ["aberto", "em_andamento", "aguardando_cliente", "resolvido"]);
 
+export const entregaTipoEnum = pgEnum("entrega_tipo", ["guia", "demonstrativo", "outro"]);
+
 export const usuarios = pgTable("usuarios", {
   id: uuid("id").defaultRandom().primaryKey(),
   nome: varchar("nome", { length: 160 }).notNull(),
@@ -33,6 +36,10 @@ export const usuarios = pgTable("usuarios", {
   senhaHash: text("senha_hash").notNull(),
   papel: papelEnum("papel").notNull().default("atendimento"),
   ativo: integer("ativo").notNull().default(1),
+  // Papel "cliente": empresa a que o login dá acesso (portal)
+  clienteId: uuid("cliente_id").references((): AnyPgColumn => clientes.id, { onDelete: "cascade" }),
+  // Senha provisória: força a troca no primeiro acesso
+  trocarSenha: boolean("trocar_senha").notNull().default(false),
   criadoEm: timestamp("criado_em").defaultNow().notNull(),
 });
 
@@ -175,3 +182,26 @@ export const chamadoEventos = pgTable("chamado_eventos", {
   texto: text("texto").notNull(),
   criadoEm: timestamp("criado_em").defaultNow().notNull(),
 });
+
+// Guias e demonstrativos mensais enviados ao cliente (o arquivo fica no Drive; aqui só o link e o rastro de envio)
+export const entregas = pgTable(
+  "entregas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    tipo: entregaTipoEnum("tipo").notNull().default("guia"),
+    competencia: varchar("competencia", { length: 7 }).notNull(), // AAAA-MM
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    url: text("url").notNull(),
+    vencimento: date("vencimento"),
+    valorCentavos: integer("valor_centavos"),
+    observacao: text("observacao"),
+    criadoPor: uuid("criado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    emailEnviadoEm: timestamp("email_enviado_em"),
+    emailEnviadoPara: varchar("email_enviado_para", { length: 200 }),
+    whatsappEm: timestamp("whatsapp_em"),
+    visualizadoEm: timestamp("visualizado_em"),
+  },
+  (t) => [index("entregas_cliente_idx").on(t.clienteId), index("entregas_comp_idx").on(t.competencia)],
+);

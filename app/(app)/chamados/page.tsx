@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { chamados, clientes } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeVerClientes } from "@/lib/papeis";
+import { homePara, podeVerClientes } from "@/lib/papeis";
 import { CATEGORIAS, PRIORIDADES, STATUS, estourado } from "@/lib/chamados";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function Chamados({ searchParams }: { searchParams: Promise<{ todos?: string }> }) {
   const { todos } = await searchParams;
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
 
   const q = db
     .select({

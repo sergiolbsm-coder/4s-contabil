@@ -3,14 +3,14 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { clientes } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
-import { podeVerClientes } from "@/lib/papeis";
+import { homePara, podeVerClientes } from "@/lib/papeis";
 import { ChamadoForm } from "./chamado-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovoChamado() {
   const u = await exigirUsuario();
-  if (!podeVerClientes(u.papel)) redirect("/login");
+  if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   const lista = await db.select({ id: clientes.id, razaoSocial: clientes.razaoSocial })
     .from(clientes).where(ne(clientes.status, "inativo")).orderBy(asc(clientes.razaoSocial));
   return (

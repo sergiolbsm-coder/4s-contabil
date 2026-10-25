@@ -31,19 +31,19 @@ export async function encerrarSessao() {
   jar.delete(COOKIE);
 }
 
-export type Usuario = { id: string; nome: string; email: string; papel: Papel };
+export type Usuario = { id: string; nome: string; email: string; papel: Papel; clienteId: string | null; trocarSenha: boolean };
 
 export async function usuarioAtual(): Promise<Usuario | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const [row] = await db
-    .select({ id: usuarios.id, nome: usuarios.nome, email: usuarios.email, papel: usuarios.papel, ativo: usuarios.ativo })
+    .select({ id: usuarios.id, nome: usuarios.nome, email: usuarios.email, papel: usuarios.papel, ativo: usuarios.ativo, clienteId: usuarios.clienteId, trocarSenha: usuarios.trocarSenha })
     .from(sessoes)
     .innerJoin(usuarios, eq(usuarios.id, sessoes.usuarioId))
     .where(and(eq(sessoes.tokenHash, hash(token)), gt(sessoes.expiraEm, new Date())))
     .limit(1);
   if (!row || !row.ativo) return null;
-  return { id: row.id, nome: row.nome, email: row.email, papel: row.papel };
+  return { id: row.id, nome: row.nome, email: row.email, papel: row.papel, clienteId: row.clienteId, trocarSenha: row.trocarSenha };
 }
 
 export async function exigirUsuario(): Promise<Usuario> {
