@@ -2,34 +2,49 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/session";
 import { sair } from "@/lib/auth-actions";
-import { ROTULOS_PAPEL, ehAdmin, podeVerClientes } from "@/lib/papeis";
+import { ROTULOS_PAPEL, ehAdmin, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import { PRODUTO, corSegura } from "@/lib/escritorio";
-import { Nav } from "./nav";
+import { Nav, type ItemMenu } from "./nav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await exigirUsuario();
   if (u.trocarSenha) redirect("/trocar-senha");
   const esc = u.escritorio;
 
-  const itens = [
+  const edita = podeEditarClientes(u.papel);
+  const itens: ItemMenu[] = [
     ...(podeVerClientes(u.papel)
       ? [
-          { href: "/clientes", rotulo: "Clientes" },
+          { href: "/clientes", rotulo: "Clientes", filhos: [{ href: "/clientes", rotulo: "Todos os clientes" }, ...(edita ? [{ href: "/clientes/novo", rotulo: "Novo cliente" }] : [])] },
           { href: "/onboarding", rotulo: "Onboarding" },
-          { href: "/chamados", rotulo: "Chamados" },
-          { href: "/entregas", rotulo: "Entregas mensais" },
+          {
+            href: "/chamados", rotulo: "Chamados",
+            filhos: [{ href: "/chamados", rotulo: "Em aberto" }, { href: "/chamados?todos=1", rotulo: "Incluir resolvidos" }, { href: "/chamados/novo", rotulo: "Novo chamado" }],
+          },
+          { href: "/entregas", rotulo: "Entregas mensais", filhos: [{ href: "/entregas", rotulo: "Painel de registros" }, { href: "/entregas/nova", rotulo: "Nova entrega" }] },
           ...(ehAdmin(u.papel)
-            ? [{ href: "/usuarios", rotulo: "Usuários e acessos" }, { href: "/configuracoes", rotulo: "Configurações" }]
+            ? [
+                { href: "/usuarios", rotulo: "Usuários e acessos", filhos: [{ href: "/usuarios#acessos", rotulo: "Acessos criados" }, { href: "/usuarios#novo-acesso", rotulo: "Novo acesso" }] },
+                {
+                  href: "/configuracoes", rotulo: "Configurações",
+                  filhos: [
+                    { href: "/configuracoes#marca", rotulo: "Marca" }, { href: "/configuracoes#emails", rotulo: "E-mails" }, { href: "/configuracoes#sla", rotulo: "Prazos dos chamados" },
+                    { href: "/configuracoes#documentos", rotulo: "Documentos do onboarding" }, { href: "/configuracoes#whatsapp", rotulo: "Mensagem do WhatsApp" },
+                  ],
+                },
+              ]
             : []),
         ]
       : u.papel === "cliente"
         ? [
             { href: "/portal/indicadores", rotulo: "Indicadores" },
             { href: "/portal", rotulo: "Meus documentos" },
-            { href: "/portal/chamados", rotulo: "Meus chamados" },
+            { href: "/portal/chamados", rotulo: "Meus chamados", filhos: [{ href: "/portal/chamados", rotulo: "Acompanhar" }, { href: "/portal/chamados/novo", rotulo: "Abrir chamado" }] },
           ]
         : []),
-    ...(u.superadmin ? [{ href: "/plataforma", rotulo: "Plataforma" }] : []),
+    ...(u.superadmin
+      ? [{ href: "/plataforma", rotulo: "Plataforma", filhos: [{ href: "/plataforma#escritorios", rotulo: "Escritórios" }, { href: "/plataforma#novo-escritorio", rotulo: "Novo escritório" }] }]
+      : []),
   ];
 
   return (

@@ -26,11 +26,11 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold">Usuários e acessos</h1>
-      <section>
+      <section id="novo-acesso" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Novo acesso</h2>
         <NovoUsuarioForm clientes={empresas} clienteInicial={clienteInicial} />
       </section>
-      <section>
+      <section id="acessos" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Acessos criados</h2>
         <div className="overflow-x-auto rounded-xl border bg-white">
           <table className="w-full text-left text-sm">

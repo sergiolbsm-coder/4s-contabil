@@ -20,7 +20,7 @@ export function ConfigForm({ e }: { e: Escritorio }) {
   const [state, action, pending] = useActionState(salvarConfiguracoes, undefined);
   return (
     <form action={action} className="space-y-6">
-      <section>
+      <section id="marca" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Marca</h2>
         <div className={secao}>
           <label className="sm:col-span-2">Nome do escritório <input name="nome" required defaultValue={e.nome} className={campo} /></label>
@@ -29,7 +29,7 @@ export function ConfigForm({ e }: { e: Escritorio }) {
         </div>
       </section>
 
-      <section>
+      <section id="emails" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">E-mails enviados aos clientes</h2>
         <div className={secao}>
           <label>Nome do remetente <input name="emailRemetenteNome" defaultValue={e.emailRemetenteNome ?? ""} placeholder={e.nome} className={campo} /></label>
@@ -39,7 +39,7 @@ export function ConfigForm({ e }: { e: Escritorio }) {
         </div>
       </section>
 
-      <section>
+      <section id="sla" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Prazo dos chamados (SLA, em horas)</h2>
         <div className="grid gap-3 rounded-xl border bg-white p-5 sm:grid-cols-5">
           {CATEGORIAS.map(([campoNome, chave, rotulo]) => (
@@ -49,7 +49,7 @@ export function ConfigForm({ e }: { e: Escritorio }) {
         </div>
       </section>
 
-      <section>
+      <section id="documentos" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Documentos pedidos no onboarding</h2>
         <div className="rounded-xl border bg-white p-5">
           <textarea name="documentosPadrao" rows={8} defaultValue={(e.config.documentosPadrao?.length ? e.config.documentosPadrao : DOCUMENTOS_PADRAO).join("\n")} className={campo} />
@@ -57,7 +57,7 @@ export function ConfigForm({ e }: { e: Escritorio }) {
         </div>
       </section>
 
-      <section>
+      <section id="whatsapp" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Mensagem do WhatsApp</h2>
         <div className="rounded-xl border bg-white p-5">
           <textarea name="mensagemWhatsapp" rows={6} defaultValue={e.config.mensagemWhatsapp ?? MENSAGEM_WHATSAPP_PADRAO} className={campo} />

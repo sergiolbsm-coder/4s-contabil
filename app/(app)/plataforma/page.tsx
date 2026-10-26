@@ -27,11 +27,11 @@ export default async function Plataforma() {
         <h1 className="text-xl font-semibold">Plataforma</h1>
         <p className="text-sm text-slate-500">Escritórios que usam o sistema. Aqui você cria e suspende; os dados de cada escritório ficam só com ele.</p>
       </div>
-      <section>
+      <section id="novo-escritorio" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Novo escritório</h2>
         <NovoEscritorioForm />
       </section>
-      <section>
+      <section id="escritorios" className="scroll-mt-4">
         <h2 className="mb-2 font-semibold">Escritórios</h2>
         <div className="overflow-x-auto rounded-xl border bg-white">
           <table className="w-full text-left text-sm">
