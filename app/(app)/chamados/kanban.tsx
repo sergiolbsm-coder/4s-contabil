@@ -19,6 +19,7 @@ export type CardChamado = {
   foraSla: boolean;
   responsavel: string | null;
   detalhe: string | null; // último detalhe registrado em uma etapa
+  temTelefone: boolean; // o cliente tem telefone cadastrado (WhatsApp direto)
 };
 
 const BORDA: Record<CardChamado["prioridade"], string> = { baixa: "border-l-slate-300", normal: "border-l-sky-400", alta: "border-l-amber-500", urgente: "border-l-red-600" };
@@ -109,13 +110,22 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
                       <span>{c.responsavel ?? "—"}</span>
                       {c.status !== "resolvido" && <span>prazo {dt(c.prazo)}</span>}
                     </div>
-                    <label className="mt-1 block text-[11px] text-slate-500">
+                    <div className="mt-1 flex items-center gap-1">
+                      <a
+                        href={`/chamados/${c.id}/whatsapp`} target="_blank" rel="noopener noreferrer" draggable={false}
+                        title={c.temTelefone ? "Abrir conversa no WhatsApp com o contato principal" : "Cliente sem telefone cadastrado: abre o WhatsApp para escolher o contato"}
+                        className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-medium text-white ${c.temTelefone ? "bg-emerald-600" : "bg-slate-400"}`}
+                      >
+                        WhatsApp
+                      </a>
+                    <label className="block min-w-0 flex-1 text-[11px] text-slate-500">
                       <span className="sr-only">Mover chamado {c.numero} para</span>
                       <select aria-label={`Mover chamado ${c.numero} para`} value="" onChange={(e) => pedirMover(c, e.target.value as keyof typeof STATUS)} className="w-full rounded border bg-white px-1 py-0.5">
                         <option value="">Mover para…</option>
                         {ETAPAS_KANBAN.filter((x) => x.status !== c.status).map((x) => <option key={x.status} value={x.status}>{x.titulo}</option>)}
                       </select>
                     </label>
+                    </div>
                   </li>
                 ))}
                 {doGrupo.length === 0 && <li className="rounded-lg border border-dashed p-3 text-center text-xs text-slate-400">Nenhum chamado</li>}

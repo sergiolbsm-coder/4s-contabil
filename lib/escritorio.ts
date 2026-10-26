@@ -38,6 +38,8 @@ export const DOCUMENTOS_PADRAO = [
 export const MENSAGEM_WHATSAPP_PADRAO =
   "Olá! Segue {documento} de {cliente}:\n{tipo} · {titulo}\nCompetência: {competencia}{vencimento}\n{link}\n— {escritorio}";
 
+export const MENSAGEM_CHAMADO_PADRAO = "Olá, {contato}! Aqui é da {escritorio}. Sobre o seu chamado #{numero} ({titulo}): ";
+
 export const slaHoras = (e: Escritorio, categoria: CategoriaSla) => {
   const v = e.config.sla?.[categoria];
   return typeof v === "number" && v > 0 ? v : SLA_PADRAO[categoria];
@@ -45,6 +47,8 @@ export const slaHoras = (e: Escritorio, categoria: CategoriaSla) => {
 
 export const documentosPadrao = (e: Escritorio) =>
   e.config.documentosPadrao && e.config.documentosPadrao.length > 0 ? e.config.documentosPadrao : DOCUMENTOS_PADRAO;
+
+export const mensagemChamadoTemplate = (e: Escritorio) => e.config.mensagemWhatsappChamado?.trim() || MENSAGEM_CHAMADO_PADRAO;
 
 export const mensagemWhatsappTemplate = (e: Escritorio) => e.config.mensagemWhatsapp?.trim() || MENSAGEM_WHATSAPP_PADRAO;
 

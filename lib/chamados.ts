@@ -20,6 +20,19 @@ export function calcularPrazo(
 
 export const estourado = (prazo: Date, status: keyof typeof STATUS) => status !== "resolvido" && prazo.getTime() < Date.now();
 
+// Mensagem de WhatsApp do chamado. Marcadores: {contato} {cliente} {numero} {titulo} {status} {previsao} {escritorio}
+export function mensagemWhatsappChamado(
+  modelo: string,
+  v: { contato: string; cliente: string; numero: number; titulo: string; status: keyof typeof STATUS_CLIENTE; previsao: Date; escritorio: string },
+) {
+  const valores: Record<string, string> = {
+    contato: v.contato, cliente: v.cliente, numero: String(v.numero), titulo: v.titulo, escritorio: v.escritorio,
+    status: STATUS_CLIENTE[v.status],
+    previsao: v.previsao.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }),
+  };
+  return modelo.replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m));
+}
+
 // Como o cliente enxerga o andamento (linguagem do cliente, não da equipe)
 export const STATUS_CLIENTE = {
   aberto: "Recebido — aguardando início",

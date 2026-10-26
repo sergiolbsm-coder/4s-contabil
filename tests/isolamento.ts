@@ -75,6 +75,16 @@ async function main() {
     confere("lista da A mostra o próprio cliente", (await texto("/clientes", admA.token)).includes("ZZ Cliente da A"));
     confere("lista da B mostra o próprio cliente", (await texto("/clientes", admB.token)).includes("ZZ Cliente da B"));
 
+    // 2b) contato rápido por WhatsApp a partir do chamado
+    confere("A não aciona WhatsApp de chamado da B", (await get(`/chamados/${chB.id}/whatsapp`, admA.token)).status === 404);
+    const wa = await get(`/chamados/${chB.id}/whatsapp`, admB.token);
+    const loc = decodeURIComponent(wa.headers.get("location") ?? "");
+    confere("dono abre WhatsApp do chamado com o telefone do contato", wa.status === 307 && loc.startsWith("https://wa.me/5511912345678?text="));
+    confere("mensagem do WhatsApp cita o chamado e o escritório", loc.includes("ZZ Chamado da B") && loc.includes("ZZ Teste B"));
+    const logs = await db.select({ t: S.chamadoEventos.texto }).from(S.chamadoEventos).where(eq(S.chamadoEventos.chamadoId, chB.id));
+    confere("abertura do WhatsApp ficou registrada no histórico", logs.some((l) => l.t.startsWith("WhatsApp aberto com")));
+    confere("registro de WhatsApp é interno (cliente não vê)", !(await texto(`/portal/chamados/${chB.id}`, cliB.token)).includes("WhatsApp aberto"));
+
     // 3) cliente (portal) só abre o que é da própria empresa
     confere("portal do cliente B abre o documento", (await get(`/portal/abrir/${enB.id}`, cliB.token)).status === 307);
     confere("cliente da A não abre documento da B", (await get(`/portal/abrir/${enB.id}`, cliA.token)).status === 404);

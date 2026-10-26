@@ -72,6 +72,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
       <div>
         <p className="text-xs text-slate-500">Chamado #{d.numero} · <Link href={`/clientes/${d.cliente.id}`} className="underline">{d.cliente.nome}</Link> · via {CANAIS[d.canal]} · aberto em {dt(d.criadoEm)}</p>
         <h2 className="text-lg font-semibold">{d.titulo}</h2>
+        <a href={`/chamados/${d.id}/whatsapp`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white">Falar com o cliente no WhatsApp</a>
         <p className="text-xs text-slate-500">Situação: <span className="font-medium text-slate-700">{STATUS[d.status]}</span>{d.resolvidoEm && ` · concluído em ${dt(d.resolvidoEm)}`}</p>
       </div>
 

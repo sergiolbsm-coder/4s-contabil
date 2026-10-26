@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { salvarConfiguracoes } from "@/lib/configuracoes-actions";
 import type { Escritorio } from "@/lib/escritorio";
-import { DOCUMENTOS_PADRAO, MENSAGEM_WHATSAPP_PADRAO, SLA_PADRAO } from "@/lib/escritorio";
+import { DOCUMENTOS_PADRAO, MENSAGEM_CHAMADO_PADRAO, MENSAGEM_WHATSAPP_PADRAO, SLA_PADRAO } from "@/lib/escritorio";
 
 const campo = "w-full rounded border px-3 py-2";
 const secao = "grid gap-3 rounded-xl border bg-white p-5 sm:grid-cols-2";
@@ -63,6 +63,11 @@ export function ConfigForm({ e }: { e: Escritorio }) {
           <textarea name="mensagemWhatsapp" rows={6} defaultValue={e.config.mensagemWhatsapp ?? MENSAGEM_WHATSAPP_PADRAO} className={campo} />
           <p className="mt-1 text-xs text-slate-500">
             Marcadores: {"{documento}"} {"{cliente}"} {"{tipo}"} {"{titulo}"} {"{competencia}"} {"{vencimento}"} {"{link}"} {"{escritorio}"}
+          </p>
+          <h3 className="mb-1 mt-4 text-sm font-semibold">Contato rápido pelo chamado (botão WhatsApp do cartão)</h3>
+          <textarea name="mensagemWhatsappChamado" rows={3} defaultValue={e.config.mensagemWhatsappChamado ?? MENSAGEM_CHAMADO_PADRAO} className={campo} />
+          <p className="mt-1 text-xs text-slate-500">
+            Marcadores: {"{contato}"} {"{cliente}"} {"{numero}"} {"{titulo}"} {"{status}"} {"{previsao}"} {"{escritorio}"}
           </p>
         </div>
       </section>

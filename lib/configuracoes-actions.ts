@@ -25,6 +25,7 @@ const schema = z.object({
   slaSocietario: horas, slaFiscal: horas, slaTrabalhista: horas, slaFinanceiro: horas, slaOutros: horas,
   documentosPadrao: z.string(),
   mensagemWhatsapp: z.string().trim().max(1000, "A mensagem do WhatsApp passa de 1000 caracteres"),
+  mensagemWhatsappChamado: z.string().trim().max(1000, "A mensagem de contato do chamado passa de 1000 caracteres"),
 });
 
 export async function salvarConfiguracoes(_p: EstadoConfig, form: FormData): Promise<EstadoConfig> {
@@ -48,6 +49,7 @@ export async function salvarConfiguracoes(_p: EstadoConfig, form: FormData): Pro
     ...(iguaisAoPadrao ? {} : { sla }),
     ...(docs.length ? { documentosPadrao: docs } : {}),
     ...(d.mensagemWhatsapp ? { mensagemWhatsapp: d.mensagemWhatsapp } : {}),
+    ...(d.mensagemWhatsappChamado ? { mensagemWhatsappChamado: d.mensagemWhatsappChamado } : {}),
   };
 
   await db.update(escritorios).set({

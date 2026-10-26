@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { and, desc, eq, gte, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { chamadoEventos, chamados, clientes, usuarios } from "@/db/schema";
+import { chamadoEventos, chamados, clientes, contatos, usuarios } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { homePara, podeVerClientes } from "@/lib/papeis";
 import { CANAIS, CATEGORIAS, PRIORIDADES, STATUS, estourado } from "@/lib/chamados";
@@ -36,7 +36,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
   const [lista, equipe] = await Promise.all([
     db.select({
       id: chamados.id, numero: chamados.numero, titulo: chamados.titulo, categoria: chamados.categoria, prioridade: chamados.prioridade,
-      canal: chamados.canal, status: chamados.status, prazoSla: chamados.prazoSla, cliente: clientes.razaoSocial, responsavelId: chamados.responsavelId,
+      canal: chamados.canal, status: chamados.status, prazoSla: chamados.prazoSla, cliente: clientes.razaoSocial, clienteId: chamados.clienteId, responsavelId: chamados.responsavelId,
     }).from(chamados).innerJoin(clientes, eq(clientes.id, chamados.clienteId)).where(and(...filtros)).orderBy(chamados.prazoSla).limit(300),
     db.select({ id: usuarios.id, nome: usuarios.nome, papel: usuarios.papel }).from(usuarios).where(and(eq(usuarios.escritorioId, esc), eq(usuarios.ativo, 1))),
   ]);
@@ -51,10 +51,17 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
       .where(and(inArray(chamadoEventos.chamadoId, lista.map((c) => c.id)), eq(chamadoEventos.tipo, "etapa"))).orderBy(desc(chamadoEventos.criadoEm));
     for (const e of ev) if (!detalhes.has(e.chamadoId)) detalhes.set(e.chamadoId, e.texto);
   }
+  // clientes com telefone cadastrado (para o botão de WhatsApp do cartão)
+  const comTelefone = new Set<string>();
+  if (vista === "kanban" && lista.length) {
+    const tel = await db.select({ clienteId: contatos.clienteId }).from(contatos)
+      .where(and(inArray(contatos.clienteId, [...new Set(lista.map((c) => c.clienteId))]), isNotNull(contatos.telefone)));
+    for (const t of tel) comTelefone.add(t.clienteId);
+  }
   const cards: CardChamado[] = lista.map((c) => ({
     id: c.id, numero: c.numero, titulo: c.titulo, cliente: c.cliente, categoria: CATEGORIAS[c.categoria], prioridade: c.prioridade, canal: CANAIS[c.canal],
     status: c.status, prazo: c.prazoSla.toISOString(), foraSla: estourado(c.prazoSla, c.status),
-    responsavel: c.responsavelId ? (nomes.get(c.responsavelId) ?? null) : null, detalhe: detalhes.get(c.id) ?? null,
+    responsavel: c.responsavelId ? (nomes.get(c.responsavelId) ?? null) : null, detalhe: detalhes.get(c.id) ?? null, temTelefone: comTelefone.has(c.clienteId),
   }));
 
   const dt = (d: Date) => d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });

@@ -34,6 +34,7 @@ export type ConfigEscritorio = {
   sla?: Partial<Record<"societario" | "fiscal" | "trabalhista" | "financeiro" | "outros", number>>; // horas
   documentosPadrao?: string[];
   mensagemWhatsapp?: string;
+  mensagemWhatsappChamado?: string; // contato rápido pelo cartão do chamado
 };
 
 // Cada escritório contábil que usa o ContaHub. Todo dado de negócio pertence a um escritório.
