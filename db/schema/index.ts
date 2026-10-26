@@ -267,3 +267,18 @@ export const fechamentosMensais = pgTable(
   },
   (t) => [uniqueIndex("fechamentos_cliente_comp_uq").on(t.clienteId, t.competencia), index("fechamentos_escritorio_idx").on(t.escritorioId)],
 );
+
+// Documentos (links do Drive etc.) anexados a um chamado; só aparecem no portal se marcados como visíveis
+export const chamadoDocumentos = pgTable(
+  "chamado_documentos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    chamadoId: uuid("chamado_id").notNull().references(() => chamados.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 160 }).notNull(),
+    url: text("url").notNull(),
+    visivelCliente: boolean("visivel_cliente").notNull().default(false),
+    criadoPor: uuid("criado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [index("chamado_docs_chamado_idx").on(t.chamadoId)],
+);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { chamadoEventos, chamados, usuarios } from "@/db/schema";
+import { chamadoDocumentos, chamadoEventos, chamados, usuarios } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { homePara } from "@/lib/papeis";
 import { CATEGORIAS, STATUS_CLIENTE, estourado } from "@/lib/chamados";
@@ -23,11 +23,14 @@ export default async function ChamadoDoCliente({ params }: { params: Promise<{ i
     .where(and(eq(chamados.id, id), eq(chamados.clienteId, u.clienteId), eq(chamados.escritorioId, u.escritorio.id)));
   if (!c) notFound();
 
-  const [[resp], eventos] = await Promise.all([
+  const [[resp], eventos, docs] = await Promise.all([
     c.responsavelId ? db.select({ nome: usuarios.nome }).from(usuarios).where(eq(usuarios.id, c.responsavelId)) : Promise.resolve([] as { nome: string }[]),
     db.select({ id: chamadoEventos.id, tipo: chamadoEventos.tipo, texto: chamadoEventos.texto, criadoEm: chamadoEventos.criadoEm, autor: usuarios.nome, papel: usuarios.papel })
       .from(chamadoEventos).leftJoin(usuarios, eq(usuarios.id, chamadoEventos.usuarioId))
       .where(and(eq(chamadoEventos.chamadoId, id), eq(chamadoEventos.visivelCliente, true))).orderBy(asc(chamadoEventos.criadoEm)),
+    // só documentos que a equipe marcou como visíveis ao cliente
+    db.select({ id: chamadoDocumentos.id, nome: chamadoDocumentos.nome, url: chamadoDocumentos.url, criadoEm: chamadoDocumentos.criadoEm })
+      .from(chamadoDocumentos).where(and(eq(chamadoDocumentos.chamadoId, id), eq(chamadoDocumentos.visivelCliente, true))).orderBy(asc(chamadoDocumentos.criadoEm)),
   ]);
 
   const iniciado = c.iniciadoEm != null || c.status === "em_andamento" || c.status === "resolvido";
@@ -59,6 +62,20 @@ export default async function ChamadoDoCliente({ params }: { params: Promise<{ i
       </section>
 
       {c.descricao && <p className="whitespace-pre-wrap rounded-xl border bg-white p-4 text-sm">{c.descricao}</p>}
+
+      {docs.length > 0 && (
+        <section>
+          <h2 className="mb-2 font-semibold">Documentos</h2>
+          <ul className="divide-y rounded-xl border bg-white text-sm">
+            {docs.map((x) => (
+              <li key={x.id} className="flex items-center justify-between gap-2 p-3">
+                <span>{x.nome}<span className="block text-xs text-slate-500">{dt(x.criadoEm)}</span></span>
+                <a href={x.url} target="_blank" rel="noopener noreferrer" className="rounded bg-brand px-3 py-1 text-white">Abrir</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 font-semibold">Andamento</h2>

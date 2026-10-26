@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { moverChamado } from "@/lib/chamados-actions";
 import { ETAPAS_KANBAN, STATUS } from "@/lib/chamados";
+import { PainelChamado } from "./painel-chamado";
 
 export type CardChamado = {
   id: string;
@@ -34,6 +35,7 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
   const [salvando, startTransition] = useTransition();
   const detalheRef = useRef<HTMLTextAreaElement>(null);
   const [visivel, setVisivel] = useState(false);
+  const [aberto, setAberto] = useState<string | null>(null); // chamado aberto na gaveta
 
   // dados novos do servidor (após revalidar) substituem o estado local
   useEffect(() => setCards(inicial), [inicial]);
@@ -93,7 +95,7 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
                     data-card={c.id}
                     className={`cursor-grab rounded-lg border border-l-4 bg-white p-2 text-sm shadow-sm ${BORDA[c.prioridade]} ${arrastando === c.id ? "opacity-40" : ""}`}
                   >
-                    <Link href={`/chamados/${c.id}`} className="font-medium hover:underline">#{c.numero} · {c.titulo}</Link>
+                    <button type="button" onClick={() => setAberto(c.id)} className="text-left font-medium hover:underline">#{c.numero} · {c.titulo}</button>
                     <div className="text-xs text-slate-500">{c.cliente}</div>
                     <div className="mt-1 flex flex-wrap gap-1 text-[11px]">
                       <span className="rounded bg-slate-100 px-1">{c.categoria}</span>
@@ -122,6 +124,18 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
           );
         })}
       </div>
+
+      {aberto && (
+        <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={() => setAberto(null)} onKeyDown={(e) => e.key === "Escape" && setAberto(null)}>
+          <aside role="dialog" aria-modal="true" aria-label="Detalhes do chamado" onClick={(e) => e.stopPropagation()} className="h-full w-full max-w-xl overflow-y-auto bg-slate-50 p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <Link href={`/chamados/${aberto}`} className="text-xs underline">Abrir em página inteira</Link>
+              <button type="button" onClick={() => setAberto(null)} className="rounded border bg-white px-2 py-1 text-sm" aria-label="Fechar painel">Fechar ✕</button>
+            </div>
+            <PainelChamado key={aberto} id={aberto} />
+          </aside>
+        </div>
+      )}
 
       {pendente && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onKeyDown={(e) => e.key === "Escape" && setPendente(null)}>

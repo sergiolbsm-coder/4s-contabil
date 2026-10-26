@@ -40,6 +40,10 @@ async function main() {
     { chamadoId: chB.id, tipo: "comentario", texto: "ZZ visivel ao cliente B", visivelCliente: true },
     { chamadoId: chB.id, tipo: "comentario", texto: "ZZ NOTA INTERNA B", visivelCliente: false },
   ]);
+  await db.insert(S.chamadoDocumentos).values([
+    { chamadoId: chB.id, nome: "ZZ Doc visivel B", url: "https://example.com/visivel", visivelCliente: true },
+    { chamadoId: chB.id, nome: "ZZ Doc interno B", url: "https://example.com/interno", visivelCliente: false },
+  ]);
   const [chA] = await db.insert(S.chamados).values({ escritorioId: A.id, clienteId: cA.id, titulo: "ZZ Chamado da A", prazoSla: new Date(Date.now() + 86400_000) }).returning();
   const fech = { escritorioId: B.id, clienteId: cB.id };
   await db.insert(S.fechamentosMensais).values([
@@ -80,6 +84,9 @@ async function main() {
     const htmlCh = await texto(`/portal/chamados/${chB.id}`, cliB.token);
     confere("cliente vê comentário marcado como visível", htmlCh.includes("ZZ visivel ao cliente B"));
     confere("cliente NÃO vê nota interna", !htmlCh.includes("ZZ NOTA INTERNA B"));
+    confere("cliente vê documento marcado como visível", htmlCh.includes("ZZ Doc visivel B"));
+    confere("cliente NÃO vê documento interno", !htmlCh.includes("ZZ Doc interno B"));
+    confere("equipe B vê os dois documentos na página do chamado", await (async () => { const h = await texto(`/chamados/${chB.id}`, admB.token); return h.includes("ZZ Doc visivel B") && h.includes("ZZ Doc interno B"); })());
     confere("cliente A não abre chamado da B no portal", (await get(`/portal/chamados/${chB.id}`, cliA.token)).status === 404);
     confere("cliente B não abre chamado da A no portal", (await get(`/portal/chamados/${chA.id}`, cliB.token)).status === 404);
     confere("lista do portal da A não mostra chamado da B", !(await texto("/portal/chamados", cliA.token)).includes("ZZ Chamado da B"));
