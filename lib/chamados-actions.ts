@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -85,4 +86,44 @@ export async function comentarChamado(id: string, form: FormData) {
   if (!texto) return;
   await db.insert(chamadoEventos).values({ chamadoId: id, usuarioId: u.id, tipo: "comentario", texto, visivelCliente: form.get("visivelCliente") === "on" });
   revalidatePath(`/chamados/${id}`);
+}
+
+// Mover um chamado de etapa (Kanban). Registra a mudança no histórico e, opcionalmente,
+// os detalhes da etapa — internos por padrão; só vão ao portal do cliente se marcados.
+export type EstadoMover = { erro?: string; ok?: true };
+
+export async function moverChamado(id: string, destino: string, detalhe: string, visivelCliente: boolean): Promise<EstadoMover> {
+  const u = await exigirEquipe();
+  if (!idValido(id) || !(destino in STATUS)) return { erro: "Chamado ou etapa inválidos." };
+  const novo = destino as keyof typeof STATUS;
+  const atual = await chamadoDoEscritorio(u.escritorio.id, id);
+  if (!atual) return { erro: "Chamado não encontrado." };
+  if (atual.status === novo) return { ok: true };
+  const texto = detalhe.trim().slice(0, 2000);
+
+  await db.update(chamados).set({
+    status: novo,
+    resolvidoEm: novo === "resolvido" ? new Date() : null,
+    iniciadoEm: atual.iniciadoEm ?? (novo === "em_andamento" ? new Date() : null),
+    // sem responsável ao começar a atender: quem moveu assume
+    responsavelId: novo === "em_andamento" && !atual.responsavelId ? u.id : atual.responsavelId,
+  }).where(and(eq(chamados.id, id), eq(chamados.escritorioId, u.escritorio.id)));
+
+  // o detalhe vem 1 ms depois do status para a ordem do histórico ser sempre: mudança, depois detalhes
+  const agora = new Date();
+  await db.insert(chamadoEventos).values([
+    { chamadoId: id, usuarioId: u.id, tipo: "alteracao", texto: `Status: ${STATUS[atual.status]} → ${STATUS[novo]}`, visivelCliente: true, criadoEm: agora },
+    ...(texto ? [{ chamadoId: id, usuarioId: u.id, tipo: "etapa", texto: `Detalhes da etapa “${STATUS[novo]}”: ${texto}`, visivelCliente, criadoEm: new Date(agora.getTime() + 1) }] : []),
+  ]);
+  await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: `mover_${novo}`, entidade: "chamado", entidadeId: id });
+  revalidatePath("/chamados");
+  revalidatePath(`/chamados/${id}`);
+  return { ok: true };
+}
+
+// Lembra a visão escolhida (lista ou quadro) por pessoa, em cookie
+export async function definirVista(vista: "lista" | "kanban") {
+  await exigirEquipe();
+  (await cookies()).set("vista_chamados", vista === "kanban" ? "kanban" : "lista", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  revalidatePath("/chamados");
 }

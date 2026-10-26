@@ -58,7 +58,7 @@ export default async function ChamadoDetalhe({ params }: { params: Promise<{ id:
         <h2 className="mb-2 font-semibold">Histórico</h2>
         <ul className="mb-3 space-y-2">
           {eventos.map((e) => (
-            <li key={e.id} className={`rounded-xl border p-3 text-sm ${e.tipo === "comentario" ? "bg-white" : "bg-slate-100 text-slate-600"}`}>
+            <li key={e.id} className={`rounded-xl border p-3 text-sm ${e.tipo === "comentario" ? "bg-white" : e.tipo === "etapa" ? "border-amber-200 bg-amber-50" : "bg-slate-100 text-slate-600"}`}>
               <div className="text-xs text-slate-500">{e.autor ?? "Sistema"} · {e.criadoEm.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · {e.visivel ? "visível ao cliente" : "interno"}</div>
               <div className="whitespace-pre-wrap">{e.texto}</div>
             </li>

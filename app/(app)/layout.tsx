@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/onboarding", rotulo: "Onboarding" },
           {
             href: "/chamados", rotulo: "Chamados",
-            filhos: [{ href: "/chamados", rotulo: "Em aberto" }, { href: "/chamados?todos=1", rotulo: "Incluir resolvidos" }, { href: "/chamados/novo", rotulo: "Novo chamado" }],
+            filhos: [{ href: "/chamados", rotulo: "Em aberto" }, { href: "/chamados?vista=kanban", rotulo: "Quadro Kanban" }, { href: "/chamados?todos=1", rotulo: "Incluir resolvidos" }, { href: "/chamados/novo", rotulo: "Novo chamado" }],
           },
           { href: "/entregas", rotulo: "Entregas mensais", filhos: [{ href: "/entregas", rotulo: "Painel de registros" }, { href: "/entregas/nova", rotulo: "Nova entrega" }] },
           ...(ehAdmin(u.papel)

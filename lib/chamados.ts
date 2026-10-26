@@ -27,3 +27,11 @@ export const STATUS_CLIENTE = {
   aguardando_cliente: "Aguardando sua resposta",
   resolvido: "Concluído",
 } as const;
+
+// Colunas do quadro (Kanban): mesma lista de status, com a explicação de cada etapa
+export const ETAPAS_KANBAN = [
+  { status: "aberto", titulo: "Aberto", descricao: "Recebidos, ainda sem atendimento" },
+  { status: "em_andamento", titulo: "Em andamento", descricao: "Um consultor está atuando" },
+  { status: "aguardando_cliente", titulo: "Aguardando cliente", descricao: "Dependem de informação ou resposta do cliente" },
+  { status: "resolvido", titulo: "Resolvido", descricao: "Concluídos (últimos 30 dias)" },
+] as const satisfies readonly { status: keyof typeof STATUS; titulo: string; descricao: string }[];
