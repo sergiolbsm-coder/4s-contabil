@@ -10,6 +10,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -198,6 +199,8 @@ export const chamados = pgTable(
     prazoSla: timestamp("prazo_sla").notNull(),
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
     resolvidoEm: timestamp("resolvido_em"),
+    // Quando um consultor começou a atuar (primeira vez em "em andamento"); o cliente vê isso no portal
+    iniciadoEm: timestamp("iniciado_em"),
   },
   (t) => [index("chamados_status_idx").on(t.status), index("chamados_cliente_idx").on(t.clienteId), index("chamados_escritorio_idx").on(t.escritorioId)],
 );
@@ -208,6 +211,8 @@ export const chamadoEventos = pgTable("chamado_eventos", {
   usuarioId: uuid("usuario_id").references(() => usuarios.id, { onDelete: "set null" }),
   tipo: varchar("tipo", { length: 20 }).notNull(),
   texto: text("texto").notNull(),
+  // Só o que for visível aparece na linha do tempo do portal do cliente (comentários internos ficam ocultos)
+  visivelCliente: boolean("visivel_cliente").notNull().default(false),
   criadoEm: timestamp("criado_em").defaultNow().notNull(),
 });
 
@@ -233,4 +238,32 @@ export const entregas = pgTable(
     visualizadoEm: timestamp("visualizado_em"),
   },
   (t) => [index("entregas_cliente_idx").on(t.clienteId), index("entregas_comp_idx").on(t.competencia), index("entregas_escritorio_idx").on(t.escritorioId)],
+);
+
+export type ImpostoDetalhe = { nome: string; valorCentavos: number };
+
+// Indicadores de um mês por cliente (faturamento, impostos, folha, DRE). O cliente só vê o que estiver publicado.
+export const fechamentosMensais = pgTable(
+  "fechamentos_mensais",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(), // AAAA-MM
+    faturamentoCentavos: integer("faturamento_centavos"),
+    impostosDetalhe: jsonb("impostos_detalhe").$type<ImpostoDetalhe[]>().notNull().default([]),
+    impostosCentavos: integer("impostos_centavos"),
+    folhaBrutaCentavos: integer("folha_bruta_centavos"),
+    folhaEncargosCentavos: integer("folha_encargos_centavos"),
+    proLaboreCentavos: integer("pro_labore_centavos"),
+    funcionarios: integer("funcionarios"),
+    dreDeducoesCentavos: integer("dre_deducoes_centavos"),
+    dreCustosCentavos: integer("dre_custos_centavos"),
+    dreDespesasCentavos: integer("dre_despesas_centavos"),
+    observacao: text("observacao"),
+    publicadoEm: timestamp("publicado_em"),
+    atualizadoPor: uuid("atualizado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("fechamentos_cliente_comp_uq").on(t.clienteId, t.competencia), index("fechamentos_escritorio_idx").on(t.escritorioId)],
 );

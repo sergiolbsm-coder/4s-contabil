@@ -19,3 +19,11 @@ export function calcularPrazo(
 }
 
 export const estourado = (prazo: Date, status: keyof typeof STATUS) => status !== "resolvido" && prazo.getTime() < Date.now();
+
+// Como o cliente enxerga o andamento (linguagem do cliente, não da equipe)
+export const STATUS_CLIENTE = {
+  aberto: "Recebido — aguardando início",
+  em_andamento: "Em andamento",
+  aguardando_cliente: "Aguardando sua resposta",
+  resolvido: "Concluído",
+} as const;

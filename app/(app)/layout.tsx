@@ -23,7 +23,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             : []),
         ]
       : u.papel === "cliente"
-        ? [{ href: "/portal", rotulo: "Meus documentos" }]
+        ? [
+            { href: "/portal/indicadores", rotulo: "Indicadores" },
+            { href: "/portal", rotulo: "Meus documentos" },
+            { href: "/portal/chamados", rotulo: "Meus chamados" },
+          ]
         : []),
     ...(u.superadmin ? [{ href: "/plataforma", rotulo: "Plataforma" }] : []),
   ];

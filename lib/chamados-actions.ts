@@ -41,7 +41,7 @@ export async function abrirChamado(_p: Estado, form: FormData): Promise<Estado> 
     responsavelId: u.id,
     prazoSla: calcularPrazo(r.data.categoria, r.data.prioridade, u.escritorio.config.sla),
   }).returning({ id: chamados.id });
-  await db.insert(chamadoEventos).values({ chamadoId: c.id, usuarioId: u.id, tipo: "abertura", texto: "Chamado aberto" });
+  await db.insert(chamadoEventos).values({ chamadoId: c.id, usuarioId: u.id, tipo: "abertura", texto: "Chamado aberto", visivelCliente: true });
   await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: "abrir", entidade: "chamado", entidadeId: c.id });
   redirect(`/chamados/${c.id}`);
 }
@@ -61,6 +61,8 @@ export async function atualizarChamado(id: string, form: FormData) {
     status,
     responsavelId,
     resolvidoEm: status === "resolvido" ? (atual.resolvidoEm ?? new Date()) : null,
+    // primeira vez em atendimento: o cliente passa a ver que um consultor começou
+    iniciadoEm: atual.iniciadoEm ?? (status === "em_andamento" ? new Date() : null),
   }).where(and(eq(chamados.id, id), eq(chamados.escritorioId, u.escritorio.id)));
 
   const eventos: string[] = [];
@@ -70,7 +72,7 @@ export async function atualizarChamado(id: string, form: FormData) {
     eventos.push(`Responsável: ${r?.nome ?? "ninguém"}`);
   }
   if (eventos.length) {
-    await db.insert(chamadoEventos).values(eventos.map((texto) => ({ chamadoId: id, usuarioId: u.id, tipo: "alteracao", texto })));
+    await db.insert(chamadoEventos).values(eventos.map((texto) => ({ chamadoId: id, usuarioId: u.id, tipo: "alteracao", texto, visivelCliente: true })));
   }
   revalidatePath(`/chamados/${id}`);
   revalidatePath("/chamados");
@@ -81,6 +83,6 @@ export async function comentarChamado(id: string, form: FormData) {
   if (!idValido(id) || !(await chamadoDoEscritorio(u.escritorio.id, id))) return;
   const texto = String(form.get("texto") ?? "").trim();
   if (!texto) return;
-  await db.insert(chamadoEventos).values({ chamadoId: id, usuarioId: u.id, tipo: "comentario", texto });
+  await db.insert(chamadoEventos).values({ chamadoId: id, usuarioId: u.id, tipo: "comentario", texto, visivelCliente: form.get("visivelCliente") === "on" });
   revalidatePath(`/chamados/${id}`);
 }

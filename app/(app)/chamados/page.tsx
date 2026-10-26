@@ -17,7 +17,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
   const q = db
     .select({
       id: chamados.id, numero: chamados.numero, titulo: chamados.titulo, categoria: chamados.categoria,
-      prioridade: chamados.prioridade, status: chamados.status, prazoSla: chamados.prazoSla, cliente: clientes.razaoSocial,
+      prioridade: chamados.prioridade, canal: chamados.canal, status: chamados.status, prazoSla: chamados.prazoSla, cliente: clientes.razaoSocial,
     })
     .from(chamados)
     .innerJoin(clientes, eq(clientes.id, chamados.clienteId));
@@ -46,7 +46,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
             {lista.map((c) => (
               <tr key={c.id} className="border-b last:border-0">
                 <td className="p-3 text-slate-500">{c.numero}</td>
-                <td className="p-3"><Link href={`/chamados/${c.id}`} className="font-medium hover:underline">{c.titulo}</Link><div className="text-xs text-slate-500">{c.cliente}</div></td>
+                <td className="p-3"><Link href={`/chamados/${c.id}`} className="font-medium hover:underline">{c.titulo}</Link><div className="text-xs text-slate-500">{c.cliente}{c.canal === "portal" && <span className="ml-1 rounded bg-sky-100 px-1 text-sky-800">via portal</span>}</div></td>
                 <td className="p-3">{CATEGORIAS[c.categoria]}</td>
                 <td className="p-3">{PRIORIDADES[c.prioridade]}</td>
                 <td className="p-3">{STATUS[c.status]}</td>

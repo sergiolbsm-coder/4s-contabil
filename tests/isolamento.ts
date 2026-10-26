@@ -35,9 +35,21 @@ async function main() {
   const [chB] = await db.insert(S.chamados).values({ escritorioId: B.id, clienteId: cB.id, titulo: "ZZ Chamado da B", prazoSla: new Date() }).returning();
   const [enB] = await db.insert(S.entregas).values({ escritorioId: B.id, clienteId: cB.id, competencia: "2026-10", titulo: "ZZ Guia da B", url: "https://example.com/b" }).returning();
   const [onbB] = await db.insert(S.onboardings).values({ clienteId: cB.id }).returning();
+  // chamado da B com um evento visível e um interno; chamado da A para o portal da A
+  await db.insert(S.chamadoEventos).values([
+    { chamadoId: chB.id, tipo: "comentario", texto: "ZZ visivel ao cliente B", visivelCliente: true },
+    { chamadoId: chB.id, tipo: "comentario", texto: "ZZ NOTA INTERNA B", visivelCliente: false },
+  ]);
+  const [chA] = await db.insert(S.chamados).values({ escritorioId: A.id, clienteId: cA.id, titulo: "ZZ Chamado da A", prazoSla: new Date(Date.now() + 86400_000) }).returning();
+  const fech = { escritorioId: B.id, clienteId: cB.id };
+  await db.insert(S.fechamentosMensais).values([
+    { ...fech, competencia: "2026-08", faturamentoCentavos: 987654321, impostosCentavos: 1000, impostosDetalhe: [{ nome: "DAS", valorCentavos: 1000 }], publicadoEm: new Date() },
+    { ...fech, competencia: "2026-09", faturamentoCentavos: 555555555, observacao: "ZZ RASCUNHO B" }, // não publicado
+  ]);
   const admA = await sessao(A.id, "admin");
   const admB = await sessao(B.id, "admin");
   const cliB = await sessao(B.id, "cliente", cB.id);
+  const cliA = await sessao(A.id, "cliente", cA.id);
 
   const get = (path: string, token: string) => fetch(BASE + path, { headers: { Cookie: `session_token=${token}` }, redirect: "manual" });
   const texto = async (path: string, token: string) => (await get(path, token)).text();
@@ -61,8 +73,23 @@ async function main() {
 
     // 3) cliente (portal) só abre o que é da própria empresa
     confere("portal do cliente B abre o documento", (await get(`/portal/abrir/${enB.id}`, cliB.token)).status === 307);
-    const cliA = await sessao(A.id, "cliente", cA.id);
     confere("cliente da A não abre documento da B", (await get(`/portal/abrir/${enB.id}`, cliA.token)).status === 404);
+
+    // 3b) portal: chamados e indicadores
+    confere("cliente B vê o próprio chamado no portal", (await texto(`/portal/chamados/${chB.id}`, cliB.token)).includes("ZZ Chamado da B"));
+    const htmlCh = await texto(`/portal/chamados/${chB.id}`, cliB.token);
+    confere("cliente vê comentário marcado como visível", htmlCh.includes("ZZ visivel ao cliente B"));
+    confere("cliente NÃO vê nota interna", !htmlCh.includes("ZZ NOTA INTERNA B"));
+    confere("cliente A não abre chamado da B no portal", (await get(`/portal/chamados/${chB.id}`, cliA.token)).status === 404);
+    confere("cliente B não abre chamado da A no portal", (await get(`/portal/chamados/${chA.id}`, cliB.token)).status === 404);
+    confere("lista do portal da A não mostra chamado da B", !(await texto("/portal/chamados", cliA.token)).includes("ZZ Chamado da B"));
+    const htmlInd = await texto("/portal/indicadores", cliB.token);
+    confere("cliente vê mês publicado (faturamento 9.876.543,21)", htmlInd.includes("9.876.543,21"));
+    confere("cliente NÃO vê mês em rascunho", !htmlInd.includes("5.555.555,55") && !htmlInd.includes("ZZ RASCUNHO B"));
+    confere("cliente A não vê indicadores da B", !(await texto("/portal/indicadores", cliA.token)).includes("9.876.543,21"));
+    confere("equipe A não abre indicadores do cliente da B", (await get(`/clientes/${cB.id}/indicadores`, admA.token)).status === 404);
+    confere("equipe B vê o rascunho nos indicadores do cliente", (await texto(`/clientes/${cB.id}/indicadores`, admB.token)).includes("Rascunho"));
+    confere("equipe não entra no portal de cliente", (await get("/portal/indicadores", admA.token)).status === 307);
 
     // 4) áreas restritas
     confere("admin comum não entra em /plataforma", (await get("/plataforma", admA.token)).status === 307);
