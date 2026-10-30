@@ -1,6 +1,6 @@
 import { PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
 
-export type ItemTrilha = { texto: string; feito: boolean; href?: string; acao?: string };
+export type ItemTrilha = { texto: string; feito: boolean; href?: string; acao?: string; alternar?: "movimentacao" };
 export type EtapaTrilha = { chave: string; titulo: string; itens: ItemTrilha[]; manual: boolean };
 
 type Dados = {
@@ -49,7 +49,7 @@ export function montarTrilha(d: Dados): EtapaTrilha[] {
     },
     {
       chave: "movimentacao", titulo: "Movimentação inicial", manual: true,
-      itens: [{ texto: "Extratos/notas recebidos (marque a etapa como concluída)", feito: concluida("movimentacao"), href: "#etapas", acao: "Marcar etapa" }],
+      itens: [{ texto: "Extratos/notas da movimentação inicial recebidos", feito: concluida("movimentacao"), alternar: "movimentacao", acao: "Marcar como recebida" }],
     },
     {
       chave: "entregaveis", titulo: "Entregáveis de entrada", manual: false,
@@ -65,8 +65,7 @@ export function montarTrilha(d: Dados): EtapaTrilha[] {
     {
       chave: "contrato", titulo: "Contrato e ativação", manual: false,
       itens: [
-        { texto: "Contrato assinado", feito: d.contratos.some((c) => c.status === "assinado"), href: cli, acao: "Atualizar contrato" },
-        { texto: "Cliente ativo", feito: d.cliente.status === "ativo", href: "#etapas", acao: "Concluir etapa final" },
+        { texto: "Contrato assinado (o cliente passa a ativo automaticamente)", feito: d.contratos.some((c) => c.status === "assinado"), href: cli, acao: "Atualizar contrato" },
       ],
     },
   ];

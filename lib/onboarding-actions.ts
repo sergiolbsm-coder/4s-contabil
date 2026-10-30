@@ -39,33 +39,20 @@ export async function iniciarOnboarding(clienteId: string) {
   redirect(`/onboarding/${clienteId}`);
 }
 
-export async function atualizarEtapa(clienteId: string, etapaId: string, form: FormData) {
+// Movimentação inicial não tem dado no sistema: a equipe confirma o recebimento (ou desfaz) direto na trilha.
+export async function alternarMovimentacao(clienteId: string) {
   const u = await exigirEdicaoNoCliente(clienteId);
-  const status = String(form.get("status"));
-  if (!["pendente", "em_andamento", "concluida"].includes(status)) return;
-
   const [etapa] = await db
-    .select({ id: onboardingEtapas.id, chave: onboardingEtapas.chave })
+    .select({ id: onboardingEtapas.id, status: onboardingEtapas.status })
     .from(onboardingEtapas)
     .innerJoin(onboardings, eq(onboardings.id, onboardingEtapas.onboardingId))
-    .where(and(eq(onboardingEtapas.id, etapaId), eq(onboardings.clienteId, clienteId)));
+    .where(and(eq(onboardings.clienteId, clienteId), eq(onboardingEtapas.chave, "movimentacao")));
   if (!etapa) return;
-
-  await db.update(onboardingEtapas).set({
-    status: status as "pendente" | "em_andamento" | "concluida",
-    prazo: String(form.get("prazo") ?? "") || null,
-    notas: String(form.get("notas") ?? "").trim() || null,
-    concluidaEm: status === "concluida" ? new Date() : null,
-  }).where(eq(onboardingEtapas.id, etapaId));
-
-  // Concluir "Contrato e ativação" ativa o cliente; reabrir volta para onboarding
-  if (etapa.chave === "contrato") {
-    await db.update(clientes)
-      .set({ status: status === "concluida" ? "ativo" : "onboarding", atualizadoEm: new Date() })
-      .where(eq(clientes.id, clienteId));
-    revalidatePath("/clientes");
-  }
-  await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: `etapa_${status}`, entidade: "onboarding_etapa", entidadeId: etapaId });
+  const concluir = etapa.status !== "concluida";
+  await db.update(onboardingEtapas)
+    .set({ status: concluir ? "concluida" : "pendente", concluidaEm: concluir ? new Date() : null })
+    .where(eq(onboardingEtapas.id, etapa.id));
+  await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: concluir ? "etapa_concluida" : "etapa_pendente", entidade: "onboarding_etapa", entidadeId: etapa.id });
   atualizar(clienteId);
 }
 

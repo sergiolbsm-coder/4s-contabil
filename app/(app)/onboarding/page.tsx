@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { clientes, onboardingEtapas, onboardings } from "@/db/schema";
+import { clientes, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { homePara, podeVerClientes } from "@/lib/papeis";
+import { carregarTrilha } from "@/lib/onboarding-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -12,28 +13,22 @@ export default async function PainelOnboarding() {
   const u = await exigirUsuario();
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
 
-  const linhas = await db
-    .select({
-      clienteId: clientes.id,
-      razaoSocial: clientes.razaoSocial,
-      onboardingId: onboardings.id,
-      titulo: onboardingEtapas.titulo,
-      status: onboardingEtapas.status,
-      prazo: onboardingEtapas.prazo,
-    })
+  const lista = await db
+    .select({ clienteId: clientes.id })
     .from(onboardings)
     .innerJoin(clientes, eq(clientes.id, onboardings.clienteId))
-    .innerJoin(onboardingEtapas, eq(onboardingEtapas.onboardingId, onboardings.id))
-    .where(eq(clientes.escritorioId, u.escritorio.id))
-    .orderBy(asc(onboardingEtapas.ordem));
+    .where(eq(clientes.escritorioId, u.escritorio.id));
 
-  const porCliente = new Map<string, { clienteId: string; razaoSocial: string; etapas: typeof linhas }>();
-  for (const l of linhas) {
-    const g = porCliente.get(l.onboardingId) ?? { clienteId: l.clienteId, razaoSocial: l.razaoSocial, etapas: [] };
-    g.etapas.push(l);
-    porCliente.set(l.onboardingId, g);
-  }
-  const hoje = new Date().toISOString().slice(0, 10);
+  // A trilha também alinha o status das etapas ao que já foi feito em cada cliente.
+  const linhas = (await Promise.all(lista.map((l) => carregarTrilha(u.escritorio.id, l.clienteId))))
+    .filter((d) => d !== null)
+    .map((d) => {
+      const itens = d.trilha.flatMap((t) => t.itens);
+      const pendentes = itens.filter((i) => !i.feito);
+      const atual = d.trilha.find((t) => t.itens.some((i) => !i.feito));
+      return { id: d.cliente.id, nome: d.cliente.razaoSocial, atual: atual?.titulo.split(" (")[0] ?? "Concluído", pendentes: pendentes.length, total: itens.length, proximo: pendentes[0]?.texto };
+    })
+    .sort((a, b) => b.pendentes - a.pendentes);
 
   return (
     <div>
@@ -41,23 +36,18 @@ export default async function PainelOnboarding() {
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 text-slate-500">
-            <tr><th className="p-3">Cliente</th><th className="p-3">Etapa atual</th><th className="p-3">Progresso</th><th className="p-3">Prazo</th></tr>
+            <tr><th className="p-3">Cliente</th><th className="p-3">Etapa atual</th><th className="p-3">Progresso</th><th className="p-3">Próximo item a resolver</th></tr>
           </thead>
           <tbody>
-            {porCliente.size === 0 && <tr><td colSpan={4} className="p-6 text-center text-slate-500">Nenhum onboarding em andamento. Inicie pela ficha do cliente.</td></tr>}
-            {[...porCliente.values()].map((g) => {
-              const feitas = g.etapas.filter((e) => e.status === "concluida").length;
-              const atual = g.etapas.find((e) => e.status !== "concluida");
-              const atrasado = atual?.prazo && atual.prazo < hoje;
-              return (
-                <tr key={g.clienteId} className="border-b last:border-0">
-                  <td className="p-3"><Link href={`/onboarding/${g.clienteId}`} className="font-medium hover:underline">{g.razaoSocial}</Link></td>
-                  <td className="p-3">{atual ? atual.titulo.split(" (")[0] : "Concluído"}</td>
-                  <td className="p-3">{feitas}/{g.etapas.length}</td>
-                  <td className={`p-3 ${atrasado ? "font-medium text-red-600" : ""}`}>{atual?.prazo ?? "—"}{atrasado && " · atrasado"}</td>
-                </tr>
-              );
-            })}
+            {linhas.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-slate-500">Nenhum onboarding em andamento. Inicie pela ficha do cliente.</td></tr>}
+            {linhas.map((l) => (
+              <tr key={l.id} className="border-b last:border-0">
+                <td className="p-3"><Link href={`/onboarding/${l.id}`} className="font-medium hover:underline">{l.nome}</Link></td>
+                <td className="p-3">{l.atual}</td>
+                <td className="p-3">{l.total - l.pendentes}/{l.total} itens</td>
+                <td className="p-3 text-slate-600">{l.proximo ?? "✅ Tudo feito"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

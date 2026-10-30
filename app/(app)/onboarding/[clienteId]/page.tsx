@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { and, asc, count, eq, isNotNull } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import { clienteDoEscritorio } from "@/lib/guards";
-import { contatos, contratos, diagnosticos, entregas, fechamentosMensais, onboardingDocumentos, onboardingEtapas, onboardings } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
-import { montarTrilha } from "@/lib/onboarding-trilha";
-import { ETAPA_STATUS, PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
-import { adicionarDocumento, alternarDocumento, atualizarEtapa, salvarDiagnostico } from "@/lib/onboarding-actions";
+import { PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
+import { carregarTrilha } from "@/lib/onboarding-sync";
+import { adicionarDocumento, alternarDocumento, alternarMovimentacao, salvarDiagnostico } from "@/lib/onboarding-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,23 +16,9 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
   if (!podeVerClientes(u.papel)) redirect(homePara(u.papel));
   if (!/^[0-9a-f-]{36}$/.test(clienteId)) notFound();
 
-  const c = await clienteDoEscritorio(u.escritorio.id, clienteId);
-  const [o] = await db.select().from(onboardings).where(eq(onboardings.clienteId, clienteId));
-  if (!c || !o) notFound();
-
-  const [etapas, docs, [diag], cts, ctr, [fech], [ent]] = await Promise.all([
-    db.select().from(onboardingEtapas).where(eq(onboardingEtapas.onboardingId, o.id)).orderBy(asc(onboardingEtapas.ordem)),
-    db.select().from(onboardingDocumentos).where(eq(onboardingDocumentos.onboardingId, o.id)).orderBy(asc(onboardingDocumentos.nome)),
-    db.select().from(diagnosticos).where(eq(diagnosticos.onboardingId, o.id)),
-    db.select().from(contatos).where(eq(contatos.clienteId, clienteId)),
-    db.select().from(contratos).where(eq(contratos.clienteId, clienteId)),
-    db.select({ n: count() }).from(fechamentosMensais).where(and(eq(fechamentosMensais.clienteId, clienteId), isNotNull(fechamentosMensais.publicadoEm))),
-    db.select({ n: count() }).from(entregas).where(and(eq(entregas.clienteId, clienteId), eq(entregas.escritorioId, u.escritorio.id))),
-  ]);
-  const trilha = montarTrilha({
-    clienteId, cliente: c, contatos: cts, contratos: ctr, documentos: docs, respostas: diag?.respostas ?? {},
-    fechamentosPublicados: fech?.n ?? 0, entregas: ent?.n ?? 0, etapas,
-  });
+  const dados = await carregarTrilha(u.escritorio.id, clienteId);
+  if (!dados) notFound();
+  const { cliente: c, docs, diag, etapas, trilha } = dados;
   const totalItens = trilha.reduce((a, e) => a + e.itens.length, 0);
   const itensFeitos = trilha.reduce((a, e) => a + e.itens.filter((i) => i.feito).length, 0);
   const pct = Math.round((itensFeitos / totalItens) * 100);
@@ -48,7 +30,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-semibold">Onboarding · {c.razaoSocial}</h1>
-        <p className="text-sm text-slate-500">{etapas.filter((e) => e.status === "concluida").length}/{etapas.length} etapas · {recebidos}/{docs.length} documentos</p>
+        <p className="text-sm text-slate-500">{etapas.filter((e) => e.status === "concluida").length}/{etapas.length} etapas concluídas · {recebidos}/{docs.length} documentos</p>
       </div>
 
       <section className="rounded-xl border bg-white p-4">
@@ -76,6 +58,11 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                     <li key={it.texto} className="flex flex-wrap items-center gap-2">
                       <span aria-hidden>{it.feito ? "✔" : "○"}</span>
                       <span className={it.feito ? "text-slate-400 line-through" : ""}>{it.texto}</span>
+                      {it.alternar && edita && (
+                        <form action={alternarMovimentacao.bind(null, clienteId)} className="ml-auto">
+                          <button className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</button>
+                        </form>
+                      )}
                       {!it.feito && it.href && (it.href.startsWith("#")
                         ? <a href={it.href} className="ml-auto text-xs underline">{it.acao} →</a>
                         : <Link href={it.href} className="ml-auto text-xs underline">{it.acao} →</Link>)}
@@ -85,25 +72,6 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
               </li>
             );
           })}
-        </ol>
-      </section>
-
-      <section id="etapas">
-        <h2 className="mb-2 font-semibold">Etapas</h2>
-        <ol className="space-y-2">
-          {etapas.map((e) => (
-            <li key={e.id} className="rounded-xl border bg-white p-3 text-sm">
-              <form action={atualizarEtapa.bind(null, clienteId, e.id)} className="flex flex-wrap items-center gap-2">
-                <span className="w-full font-medium sm:w-auto sm:flex-1">{e.ordem}. {e.titulo}</span>
-                <select name="status" defaultValue={e.status} disabled={!edita} className={campo}>
-                  {Object.entries(ETAPA_STATUS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-                <input name="prazo" type="date" defaultValue={e.prazo ?? ""} disabled={!edita} className={campo} />
-                <input name="notas" placeholder="Notas" defaultValue={e.notas ?? ""} disabled={!edita} className={`${campo} flex-1`} />
-                {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar</button>}
-              </form>
-            </li>
-          ))}
         </ol>
       </section>
 
