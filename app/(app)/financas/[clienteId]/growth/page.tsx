@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { growthCampanhas, growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
+import { growthCampanhaLinha, growthCampanhas, growthCanais, growthConexoes, growthLinhas, growthLinhasMes, growthMensal, growthPremissas } from "@/db/schema";
 import { acessoFinancas, competenciaValida, diasNoMes, hojeISO, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
 import { carregarBase, dreMes } from "@/lib/financas-dados";
-import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, planoDaMeta, projecao, type Premissas } from "@/lib/growth";
-import { salvarMesGrowth, salvarPremissas } from "@/lib/growth-actions";
+import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, planoDaMeta, projecao, sugerirLinha, type Premissas } from "@/lib/growth";
+import { alternarLinha, criarLinhas, salvarMesGrowth, salvarPremissas, salvarVinculos } from "@/lib/growth-actions";
 import { fmtReais, reaisParaCampo } from "@/lib/dinheiro";
 import { Botao } from "@/components/botao";
 import { GerarToken } from "./conexao";
@@ -27,6 +27,10 @@ export default async function Growth({ params, searchParams }: { params: Promise
   const [conexao] = await db.select().from(growthConexoes).where(eq(growthConexoes.clienteId, clienteId));
   const canais = await db.select().from(growthCanais).where(eq(growthCanais.clienteId, clienteId));
   const campanhas = await db.select().from(growthCampanhas).where(eq(growthCampanhas.clienteId, clienteId));
+  const linhas = await db.select().from(growthLinhas).where(eq(growthLinhas.clienteId, clienteId)).orderBy(asc(growthLinhas.ordem), asc(growthLinhas.nome));
+  const linhasAtivas = linhas.filter((l) => l.ativa);
+  const linhasMes = await db.select().from(growthLinhasMes).where(eq(growthLinhasMes.clienteId, clienteId));
+  const vinculos = await db.select().from(growthCampanhaLinha).where(eq(growthCampanhaLinha.clienteId, clienteId));
   const mesSel = sp.mes && competenciaValida(sp.mes) ? sp.mes : mes; // mês em edição e das campanhas listadas
   const campanhasMes = campanhas.filter((c) => c.competencia === mesSel).sort((x, y) => x.canal.localeCompare(y.canal) || y.custoCentavos - x.custoCentavos);
   // Impostos sobre mídia por canal (1000 = 10%): somados ao custo que vem das APIs, que não inclui impostos
@@ -35,11 +39,21 @@ export default async function Growth({ params, searchParams }: { params: Promise
   const impostosDoMes = (c: string) => mensal.find((m) => m.competencia === c)?.premissas?.impostosMidiaBps ?? impostos;
   const comImposto = (canal: string, custo: number, c: string) => Math.round(custo * (1 + (impostosDoMes(c)[canal] ?? 0) / 10000));
   const nomesCanais = [...new Set(["Google Ads", "Meta Ads", ...canais.map((c) => c.canal)])];
+  // Linha de cada campanha: o vínculo salvo vale; sem vínculo salvo, sugere pelo nome da campanha
+  const linhaDaCampanha = (canal: string, campanha: string) => {
+    const salvo = vinculos.find((v) => v.canal === canal && v.campanha === campanha);
+    return salvo ? salvo.linhaId : sugerirLinha(campanha, linhasAtivas);
+  };
   const midiaDoMes = (c: string, manual: number | null) => {
     const doMes = canais.filter((x) => x.competencia === c);
     return doMes.length ? doMes.reduce((t, x) => t + comImposto(x.canal, x.custoCentavos, c), 0) : manual;
   };
 
+  const desempenhoLinhas = [...linhasAtivas.map((l) => ({ id: l.id as string | null, nome: l.nome })), { id: null as string | null, nome: "Sem linha" }].map((l) => {
+    const midia = campanhasMes.filter((c) => linhaDaCampanha(c.canal, c.campanha) === l.id).reduce((t, c) => t + comImposto(c.canal, c.custoCentavos, c.competencia), 0);
+    const lm = l.id ? linhasMes.find((x) => x.linhaId === l.id && x.competencia === mesSel) : undefined;
+    return { ...l, midia, leads: lm?.leads ?? null, vendas: lm?.vendas ?? null, receita: lm?.receitaCentavos ?? null };
+  }).filter((l) => l.id !== null || l.midia > 0);
   // Dados reais dos 3 últimos meses fechados (DRE por competência)
   const ult3 = [1, 2, 3].map((i) => dreMes(base.lancs, base.cats, somarMeses(mes, -i)));
   const receita3 = ult3.reduce((s, d) => s + d.grupos.receita, 0);
@@ -195,6 +209,34 @@ export default async function Growth({ params, searchParams }: { params: Promise
 
       <section id="mes" className="rounded-xl border bg-white p-4">
         <h3 className="mb-2 font-semibold">4. Marketing e vendas do mês</h3>
+        <div className="mb-4 rounded-lg border p-3 text-sm">
+          <div className="mb-2 font-medium">Linhas de negócio</div>
+          {linhas.length === 0 ? (
+            <p className="mb-2 text-slate-500">Separe leads e vendas por produto (ex.: Café com RH, Recolocação, Turma aberta, In Company). O total do mês passa a ser a soma das linhas e você vê CAC e ROAS de cada uma.</p>
+          ) : (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {linhas.map((l) => (
+                <form key={l.id} action={alternarLinha.bind(null, clienteId, l.id)} className="inline">
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-0.5 ${l.ativa ? "" : "text-slate-400 line-through"}`}>
+                    {l.nome}
+                    {a.edita && <Botao className="text-xs text-brand underline">{l.ativa ? "desativar" : "ativar"}</Botao>}
+                  </span>
+                </form>
+              ))}
+            </div>
+          )}
+          {a.edita && (
+            <div className="flex flex-wrap items-center gap-2">
+              {linhas.length === 0 && (
+                <form action={criarLinhas.bind(null, clienteId)}><input type="hidden" name="sugeridas" value="1" /><Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Criar Café com RH, Recolocação, Turma aberta e In Company</Botao></form>
+              )}
+              <form action={criarLinhas.bind(null, clienteId)} className="flex gap-2">
+                <input name="nome" placeholder="Nova linha (ex.: Mentoria)" className={campo} />
+                <Botao className="whitespace-nowrap rounded border px-3 py-1 text-sm">Adicionar linha</Botao>
+              </form>
+            </div>
+          )}
+        </div>
         {a.edita && (
           <form key={mesSel} action={salvarMesGrowth.bind(null, clienteId)} className="mb-4 space-y-2">
             <input type="hidden" name="competencia" value={mesSel} />
@@ -203,11 +245,34 @@ export default async function Growth({ params, searchParams }: { params: Promise
             <div className="grid gap-2 md:grid-cols-3">
               <Rotulo t="Meta do mês (R$)"><input name="meta" defaultValue={reaisParaCampo(mAtual?.metaCentavos)} className={campo} /></Rotulo>
               <Rotulo t="Investido em mídia (R$)" dica="Sem o IL Campanhas, informe já com impostos. Com ele, é calculado pelos canais."><input name="midia" defaultValue={reaisParaCampo(mAtual?.midiaCentavos)} className={campo} /></Rotulo>
-              <Rotulo t="Leads"><input name="leads" defaultValue={mAtual?.leads ?? ""} className={campo} /></Rotulo>
-              <Rotulo t="Vendas fechadas (quantidade)"><input name="vendas" defaultValue={mAtual?.vendas ?? ""} className={campo} /></Rotulo>
-              <Rotulo t="Valor vendido via marketing (R$)" dica="Base do ROAS real. Vazio = usa a receita do DRE."><input name="receitaVendas" defaultValue={reaisParaCampo(mAtual?.receitaVendasCentavos)} className={campo} /></Rotulo>
+              {!linhasAtivas.length && <>
+                <Rotulo t="Leads"><input name="leads" defaultValue={mAtual?.leads ?? ""} className={campo} /></Rotulo>
+                <Rotulo t="Vendas fechadas (quantidade)"><input name="vendas" defaultValue={mAtual?.vendas ?? ""} className={campo} /></Rotulo>
+                <Rotulo t="Valor vendido via marketing (R$)" dica="Base do ROAS real. Vazio = usa a receita do DRE."><input name="receitaVendas" defaultValue={reaisParaCampo(mAtual?.receitaVendasCentavos)} className={campo} /></Rotulo>
+              </>}
               <Rotulo t="Outros custos de aquisição (R$)" dica="Comissões, equipe comercial etc. Entram no CAC real."><input name="custoComercial" defaultValue={reaisParaCampo(mAtual?.custoComercialCentavos)} className={campo} /></Rotulo>
             </div>
+            {linhasAtivas.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b bg-slate-50 text-slate-500"><tr><th className="p-2">Linha</th><th className="p-2">Leads</th><th className="p-2">Vendas fechadas</th><th className="p-2">Valor vendido (R$)</th></tr></thead>
+                  <tbody>
+                    {linhasAtivas.map((l) => {
+                      const lm = linhasMes.find((x) => x.linhaId === l.id && x.competencia === mesSel);
+                      return (
+                        <tr key={l.id} className="border-b last:border-0">
+                          <td className="p-2 font-medium">{l.nome}</td>
+                          <td className="p-2"><input name={`leads:${l.id}`} defaultValue={lm?.leads ?? ""} className={campo} /></td>
+                          <td className="p-2"><input name={`vendas:${l.id}`} defaultValue={lm?.vendas ?? ""} className={campo} /></td>
+                          <td className="p-2"><input name={`receita:${l.id}`} defaultValue={reaisParaCampo(lm?.receitaCentavos)} className={campo} /></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="p-2 text-xs text-slate-500">O total do mês (leads, vendas e valor vendido) é a soma das linhas.</p>
+              </div>
+            )}
             <Botao className="rounded bg-brand px-3 py-1.5 text-sm text-white">Salvar mês</Botao>
           </form>
         )}
@@ -241,6 +306,27 @@ export default async function Growth({ params, searchParams }: { params: Promise
           </table>
         </div>
         <p className="mt-2 text-xs text-slate-500">CAC real = (mídia com impostos + outros custos de aquisição) ÷ vendas fechadas. ROAS real = valor vendido via marketing (ou receita do DRE, se vazio) ÷ mídia.</p>
+        {linhasAtivas.length > 0 && (
+          <div className="mt-5">
+            <h4 className="text-sm font-semibold capitalize">Desempenho por linha em {mesLongo(mesSel)}</h4>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b text-slate-500"><tr><th className="py-2">Linha</th><th className="text-right">Mídia (c/ impostos)</th><th className="text-right">Leads</th><th className="text-right">Custo por lead</th><th className="text-right">Vendas</th><th className="text-right">CAC</th><th className="text-right">Valor vendido</th><th className="text-right">ROAS</th></tr></thead>
+                <tbody>
+                  {desempenhoLinhas.map((l) => (
+                    <tr key={l.nome} className="border-b last:border-0">
+                      <td className="py-2 font-medium">{l.nome}</td><td className="text-right">{l.midia ? fmtReais(l.midia) : "—"}</td>
+                      <td className="text-right">{l.leads ?? "—"}</td><td className="text-right">{l.midia && l.leads ? fmtReais(Math.round(l.midia / l.leads)) : "—"}</td>
+                      <td className="text-right">{l.vendas ?? "—"}</td><td className="text-right">{l.midia && l.vendas ? fmtReais(Math.round(l.midia / l.vendas)) : "—"}</td>
+                      <td className="text-right">{l.receita != null ? fmtReais(l.receita) : "—"}</td><td className="text-right">{l.midia && l.receita ? `${(l.receita / l.midia).toFixed(1)}x` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">A mídia de cada linha vem das campanhas vinculadas a ela (veja &quot;Campanhas&quot; na seção de conexão). Campanhas sem vínculo aparecem em &quot;Sem linha&quot;.</p>
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border bg-white p-4">
@@ -252,9 +338,9 @@ export default async function Growth({ params, searchParams }: { params: Promise
         {a.edita && a.u.papel !== "cliente" && <GerarToken clienteId={clienteId} conectado={!!conexao} />}
         <h4 className="mt-5 text-sm font-semibold capitalize">Campanhas de {mesLongo(mesSel)}</h4>
         {campanhasMes.length === 0 ? <p className="mt-1 text-sm text-slate-500">Sem campanhas recebidas neste mês. Envie pelo IL Campanhas.</p> : (
-          <div className="mt-2 overflow-x-auto">
+          <form action={salvarVinculos.bind(null, clienteId)} className="mt-2 overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b text-slate-500"><tr><th className="py-2">Canal</th><th>Campanha</th><th className="text-right">Custo</th><th className="text-right">Com impostos</th><th className="text-right">Cliques</th><th className="text-right">CPC</th><th className="text-right">Conversões</th><th className="text-right">Custo/conversão</th></tr></thead>
+              <thead className="border-b text-slate-500"><tr><th className="py-2">Canal</th><th>Campanha</th><th className="text-right">Custo</th><th className="text-right">Com impostos</th><th className="text-right">Cliques</th><th className="text-right">CPC</th><th className="text-right">Conversões</th><th className="text-right">Custo/conversão</th>{linhasAtivas.length > 0 && <th className="pl-3">Linha</th>}</tr></thead>
               <tbody>
                 {campanhasMes.map((c) => (
                   <tr key={c.id} className="border-b last:border-0">
@@ -262,11 +348,25 @@ export default async function Growth({ params, searchParams }: { params: Promise
                     <td className="text-right">{fmtReais(comImposto(c.canal, c.custoCentavos, c.competencia))}</td>
                     <td className="text-right">{c.cliques ?? "—"}</td><td className="text-right">{c.cliques ? fmtReais(Math.round(c.custoCentavos / c.cliques)) : "—"}</td>
                     <td className="text-right">{c.conversoes ?? "—"}</td><td className="text-right">{c.conversoes ? fmtReais(Math.round(comImposto(c.canal, c.custoCentavos, c.competencia) / c.conversoes)) : "—"}</td>
+                    {linhasAtivas.length > 0 && (
+                      <td className="pl-3">
+                        <select name={`v:${c.canal}|${c.campanha}`} defaultValue={linhaDaCampanha(c.canal, c.campanha) ?? ""} disabled={!a.edita} className="rounded border px-1 py-0.5 text-sm">
+                          <option value="">Sem linha</option>
+                          {linhasAtivas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
+                        </select>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+            {a.edita && linhasAtivas.length > 0 && (
+              <div className="mt-2 flex items-center gap-3">
+                <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar vínculos</Botao>
+                <span className="text-xs text-slate-500">A linha sugerida vem do nome da campanha; salve para fixar. O vínculo vale para todos os meses.</span>
+              </div>
+            )}
+          </form>
         )}
       </section>
 

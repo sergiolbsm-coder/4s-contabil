@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { growthCampanhas, growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
+import { growthCampanhas, growthCanais, growthConexoes, growthLinhasMes, growthMensal, growthPremissas } from "@/db/schema";
 import { fotoPremissas } from "@/lib/growth";
 
 // Recebe do IL Campanhas os números de marketing do mês, por canal.
@@ -63,8 +63,11 @@ export async function POST(req: Request) {
   // Mídia do mês = soma dos canais; leads = valor informado ou soma das conversões; vendas só se informadas
   const totalCanais = await db.select({ custo: sql<number>`coalesce(sum(${growthCanais.custoCentavos}),0)::int`, conv: sql<number>`coalesce(sum(${growthCanais.conversoes}),0)::int` })
     .from(growthCanais).where(and(eq(growthCanais.clienteId, con.clienteId), eq(growthCanais.competencia, competencia)));
-  const leads = inteiroOuNulo(corpo.leads) ?? totalCanais[0].conv;
-  const vendas = inteiroOuNulo(corpo.vendas);
+  // Se o mês já tem leads lançados por linha de negócio, o total vem delas e o envio não sobrescreve
+  const [porLinha] = await db.select({ n: sql<number>`count(${growthLinhasMes.leads})::int`, leads: sql<number>`coalesce(sum(${growthLinhasMes.leads}),0)::int` })
+    .from(growthLinhasMes).where(and(eq(growthLinhasMes.clienteId, con.clienteId), eq(growthLinhasMes.competencia, competencia)));
+  const leads = porLinha.n > 0 ? porLinha.leads : inteiroOuNulo(corpo.leads) ?? totalCanais[0].conv;
+  const vendas = porLinha.n > 0 ? null : inteiroOuNulo(corpo.vendas);
   // Foto das premissas: grava só se o mês ainda não tem (um mês já salvo mantém as dele)
   const [pr] = await db.select().from(growthPremissas).where(eq(growthPremissas.clienteId, con.clienteId));
   const foto = fotoPremissas(pr);

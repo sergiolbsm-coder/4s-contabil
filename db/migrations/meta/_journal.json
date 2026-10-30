@@ -99,6 +99,13 @@
       "when": 1793402614931,
       "tag": "0013_brave_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793403040499,
+      "tag": "0014_handy_dark_phoenix",
+      "breakpoints": true
     }
   ]
 }

@@ -76,3 +76,11 @@ export function fotoPremissas(pr: {
     metaPadraoCentavos: pr?.metaFaturamentoCentavos ?? null, impostosMidiaBps: pr?.impostosMidiaBps ?? {}, salvoEm: new Date().toISOString(),
   };
 }
+
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// Sugere a linha de negócio pelo nome da campanha: o nome da linha (sem acento/caixa) aparece no nome da campanha
+export function sugerirLinha(campanha: string, linhas: { id: string; nome: string }[]): string | null {
+  const c = ` ${semAcento(campanha)} `;
+  return linhas.find((l) => c.includes(` ${semAcento(l.nome)} `))?.id ?? null;
+}
+export const LINHAS_SUGERIDAS = ["Café com RH", "Recolocação", "Turma aberta", "In Company"];

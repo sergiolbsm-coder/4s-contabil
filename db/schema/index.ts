@@ -534,3 +534,45 @@ export const growthCampanhas = pgTable(
   },
   (t) => [uniqueIndex("growth_campanhas_uq").on(t.clienteId, t.competencia, t.canal, t.campanha)],
 );
+
+// Linhas de negócio do Growth (ex.: Café com RH, Recolocação, Turma aberta, In Company)
+export const growthLinhas = pgTable(
+  "growth_linhas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 60 }).notNull(),
+    ativa: boolean("ativa").notNull().default(true),
+    ordem: integer("ordem").notNull().default(0),
+  },
+  (t) => [uniqueIndex("growth_linhas_uq").on(t.clienteId, t.nome)],
+);
+
+// Leads, vendas e valor vendido de cada linha em cada mês; a soma das linhas vira o total do mês
+export const growthLinhasMes = pgTable(
+  "growth_linhas_mes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    linhaId: uuid("linha_id").notNull().references(() => growthLinhas.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    leads: integer("leads"),
+    vendas: integer("vendas"),
+    receitaCentavos: integer("receita_centavos"),
+  },
+  (t) => [uniqueIndex("growth_linhas_mes_uq").on(t.linhaId, t.competencia)],
+);
+
+// A qual linha pertence cada campanha (vale para todos os meses)
+export const growthCampanhaLinha = pgTable(
+  "growth_campanha_linha",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    canal: varchar("canal", { length: 40 }).notNull(),
+    campanha: varchar("campanha", { length: 200 }).notNull(),
+    linhaId: uuid("linha_id").references(() => growthLinhas.id, { onDelete: "set null" }), // vazio = sem linha
+  },
+  (t) => [uniqueIndex("growth_campanha_linha_uq").on(t.clienteId, t.canal, t.campanha)],
+);
