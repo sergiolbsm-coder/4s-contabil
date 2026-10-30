@@ -7,7 +7,7 @@ import { exigirUsuario } from "@/lib/session";
 import { ehAdmin, homePara, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import Link from "next/link";
 import { iniciarOnboarding } from "@/lib/onboarding-actions";
-import { adicionarContato, adicionarContrato, atualizarCliente, removerContato } from "@/lib/clientes-actions";
+import { adicionarContato, adicionarContrato, atualizarCliente, atualizarStatusContrato, removerContato } from "@/lib/clientes-actions";
 import { ClienteForm } from "../cliente-form";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,18 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
         <ul className="mb-3 divide-y rounded-xl border bg-white text-sm">
           {ctr.length === 0 && <li className="p-3 text-slate-500">Nenhum contrato.</li>}
           {ctr.map((t) => (
-            <li key={t.id} className="p-3">{t.descricao} · {moeda(t.valorMensalCentavos)}/mês · {t.status}{t.inicio && ` · início ${t.inicio}`}</li>
+            <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <span>{t.descricao} · {moeda(t.valorMensalCentavos)}/mês{t.inicio && ` · início ${t.inicio}`}</span>
+              {edita ? (
+                <form action={atualizarStatusContrato.bind(null, id, t.id)} className="flex gap-1">
+                  <select name="status" defaultValue={t.status} className={campo}>
+                    <option value="rascunho">rascunho</option><option value="enviado">enviado</option>
+                    <option value="assinado">assinado</option><option value="encerrado">encerrado</option>
+                  </select>
+                  <button className="rounded border px-2 text-xs">Salvar</button>
+                </form>
+              ) : <span>{t.status}</span>}
+            </li>
           ))}
         </ul>
         {edita && (

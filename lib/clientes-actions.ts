@@ -97,3 +97,14 @@ export async function adicionarContrato(clienteId: string, form: FormData) {
   });
   revalidatePath(`/clientes/${clienteId}`);
 }
+
+export async function atualizarStatusContrato(clienteId: string, contratoId: string, form: FormData) {
+  const u = await exigirEdicao();
+  await clienteOuErro(u.escritorio.id, clienteId);
+  const status = String(form.get("status"));
+  if (!["rascunho", "enviado", "assinado", "encerrado"].includes(status)) return;
+  await db.update(contratos).set({ status: status as "rascunho" | "enviado" | "assinado" | "encerrado" })
+    .where(and(eq(contratos.id, contratoId), eq(contratos.clienteId, clienteId)));
+  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath(`/onboarding/${clienteId}`);
+}
