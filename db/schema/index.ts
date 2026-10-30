@@ -545,6 +545,8 @@ export const growthLinhas = pgTable(
     nome: varchar("nome", { length: 60 }).notNull(),
     ativa: boolean("ativa").notNull().default(true),
     ordem: integer("ordem").notNull().default(0),
+    ticketCentavos: integer("ticket_centavos"), // valor médio de uma venda desta linha
+    participacaoBps: integer("participacao_bps"), // fatia esperada do faturamento (1000 = 10%)
   },
   (t) => [uniqueIndex("growth_linhas_uq").on(t.clienteId, t.nome)],
 );

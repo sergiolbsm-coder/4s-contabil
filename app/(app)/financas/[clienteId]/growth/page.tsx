@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { growthCampanhaLinha, growthCampanhas, growthCanais, growthConexoes, growthLinhas, growthLinhasMes, growthMensal, growthPremissas } from "@/db/schema";
 import { acessoFinancas, competenciaValida, diasNoMes, hojeISO, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
 import { carregarBase, dreMes } from "@/lib/financas-dados";
-import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, planoDaMeta, projecao, sugerirLinha, type Premissas } from "@/lib/growth";
-import { alternarLinha, criarLinhas, salvarMesGrowth, salvarPremissas, salvarVinculos } from "@/lib/growth-actions";
+import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, mixDasLinhas, planoDaMeta, projecao, sugerirLinha, type Premissas } from "@/lib/growth";
+import { alternarLinha, criarLinhas, salvarConfigLinhas, salvarMesGrowth, salvarPremissas, salvarVinculos } from "@/lib/growth-actions";
 import { fmtReais, reaisParaCampo } from "@/lib/dinheiro";
 import { Botao } from "@/components/botao";
 import { GerarToken } from "./conexao";
@@ -62,14 +62,32 @@ export default async function Growth({ params, searchParams }: { params: Promise
   const fixosReal = temReal ? Math.round(ult3.reduce((s, d) => s + d.grupos.despesas, 0) / 3) : null;
   const receitaBase = pr?.faturamentoAtualCentavos ?? (temReal ? Math.round(receita3 / 3) : 0);
 
+  const mix = mixDasLinhas(linhasAtivas); // ticket ponderado pelo mix das linhas (substitui o ticket único)
   const p: Premissas = {
-    ticket: pr?.ticketMedioCentavos ?? 0,
+    ticket: mix?.ticketMedio ?? pr?.ticketMedioCentavos ?? 0,
     varPct: pr?.custosVariaveisBps != null ? pr.custosVariaveisBps / 10000 : varReal ?? 0,
     fixos: pr?.custosFixosCentavos ?? fixosReal ?? 0,
     cac: pr?.cacCentavos ?? null,
     usaMidia: pr?.usaMidia ?? false,
   };
   const pronto = p.ticket > 0 && p.fixos > 0;
+  // Quanto cada linha precisa vender para chegar a um faturamento total, conforme o mix de faturamento
+  const vendasPorLinha = (receita: number) => mix ? (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b text-slate-500"><tr><th className="py-2">Linha</th><th className="text-right">% do faturamento</th><th className="text-right">Faturamento</th><th className="text-right">Ticket</th><th className="text-right">Vendas</th></tr></thead>
+        <tbody>
+          {mix.itens.map((i) => (
+            <tr key={i.linha.id} className="border-b last:border-0">
+              <td className="py-2 font-medium">{i.linha.nome}</td><td className="text-right">{pct(i.fatia)}</td>
+              <td className="text-right">{fmtReais(Math.round(receita * i.fatia))}</td><td className="text-right">{fmtReais(i.linha.ticketCentavos)}</td>
+              <td className="text-right">{Math.ceil((receita * i.fatia) / (i.linha.ticketCentavos as number))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : null;
   const mc = margemContribuicao(p);
   const metaPadrao = pr?.metaFaturamentoCentavos ?? null;
   const metaDoMes = (c: string) => { const m = mensal.find((x) => x.competencia === c); return m?.metaCentavos ?? m?.premissas?.metaPadraoCentavos ?? metaPadrao; };
@@ -104,7 +122,7 @@ export default async function Growth({ params, searchParams }: { params: Promise
       <section className="rounded-xl border bg-white p-4">
         <h3 className="mb-3 font-semibold">1. Premissas</h3>
         <form action={salvarPremissas.bind(null, clienteId)} className="grid gap-3 md:grid-cols-3">
-          <Rotulo t="Ticket médio (R$)" dica="Valor médio de cada venda"><input name="ticket" defaultValue={reaisParaCampo(pr?.ticketMedioCentavos)} className={campo} disabled={!a.edita} /></Rotulo>
+          <Rotulo t="Ticket médio (R$)" dica={mix ? `Calculado pelo mix das linhas de negócio: ${fmtReais(mix.ticketMedio)}. Ajuste ticket e participação em "Linhas de negócio".` : "Valor médio de cada venda. Com vários produtos de preços diferentes, cadastre o ticket de cada linha em \"Linhas de negócio\"."}><input name="ticket" defaultValue={reaisParaCampo(pr?.ticketMedioCentavos)} className={campo} disabled={!a.edita || !!mix} /></Rotulo>
           <Rotulo t="Custos variáveis (% da venda)" dica={varReal != null ? `Real (3 meses): ${pct(varReal)}. Deixe vazio para usar.` : "Impostos, custo do produto/serviço, comissões, taxas"}>
             <input name="varPct" defaultValue={fmtPct(pr?.custosVariaveisBps)} className={campo} disabled={!a.edita} /></Rotulo>
           <Rotulo t="Custos fixos por mês (R$)" dica={fixosReal != null ? `Real (média 3 meses): ${fmtReais(fixosReal)}. Deixe vazio para usar.` : "Aluguel, equipe, ferramentas, etc."}>
@@ -145,6 +163,7 @@ export default async function Growth({ params, searchParams }: { params: Promise
               <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-500">Faturamento atual (média 3 meses)</div><div className="text-xl font-semibold">{temReal ? fmtReais(receitaBase) : "—"}</div></div>
             </div>
           )}
+          {!p.usaMidia && semMidia.receita ? <><h4 className="mt-3 text-sm font-medium">Vendas por linha no equilíbrio</h4>{vendasPorLinha(semMidia.receita)}</> : null}
           {p.usaMidia && (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -159,6 +178,7 @@ export default async function Growth({ params, searchParams }: { params: Promise
                   ))}
                 </tbody>
               </table>
+              {(() => { const c = cenarios.find((x) => x.nome.startsWith("CAC alvo")); return c?.receita ? <><h4 className="mt-3 text-sm font-medium">Vendas por linha no equilíbrio (CAC alvo)</h4>{vendasPorLinha(c.receita)}</> : null; })()}
               <p className="mt-2 text-xs text-slate-500">🛑 Limite (stop loss): se o CAC passar de <b>{fmtReais(mc)}</b>, cada venda dá prejuízo. Pause ou revise a campanha.</p>
             </div>
           )}
@@ -195,6 +215,7 @@ export default async function Growth({ params, searchParams }: { params: Promise
                   </p>
                 )}
                 <p className="text-xs text-slate-500">O faturado vem das receitas lançadas em Finanças com competência neste mês (o mesmo número do DRE). Receita não lançada não conta.</p>
+                {mix && <><h4 className="pt-1 text-sm font-medium">Vendas por linha para a meta</h4>{vendasPorLinha(metaAtual)}</>}
                 <h4 className="pt-1 text-sm font-medium">O que a meta exige no mês inteiro</h4>
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-500">Vendas necessárias</div><div className="text-xl font-semibold">{plano.vendas}</div></div>
@@ -224,6 +245,30 @@ export default async function Growth({ params, searchParams }: { params: Promise
                 </form>
               ))}
             </div>
+          )}
+          {linhasAtivas.length > 0 && (
+            <form action={salvarConfigLinhas.bind(null, clienteId)} className="mb-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b text-slate-500"><tr><th className="py-1">Linha</th><th>Ticket médio (R$)</th><th>% do faturamento esperado</th><th className="text-right">Mix real (3 meses)</th></tr></thead>
+                <tbody>
+                  {linhasAtivas.map((l) => {
+                    const rec = (id: string) => linhasMes.filter((x) => x.linhaId === id && [1, 2, 3].some((i) => x.competencia === somarMeses(mes, -i))).reduce((t, x) => t + (x.receitaCentavos ?? 0), 0);
+                    const totalReal = linhasAtivas.reduce((t, x) => t + rec(x.id), 0);
+                    const ticketReal = (() => { const v = linhasMes.filter((x) => x.linhaId === l.id && [1, 2, 3].some((i) => x.competencia === somarMeses(mes, -i))).reduce((t, x) => t + (x.vendas ?? 0), 0); return v ? Math.round(rec(l.id) / v) : null; })();
+                    return (
+                      <tr key={l.id} className="border-b last:border-0">
+                        <td className="py-1 font-medium">{l.nome}</td>
+                        <td className="pr-2"><input name={`ticket:${l.id}`} defaultValue={reaisParaCampo(l.ticketCentavos)} className={campo} disabled={!a.edita} /></td>
+                        <td className="pr-2"><input name={`part:${l.id}`} defaultValue={fmtPct(l.participacaoBps)} placeholder="ex.: 60" className={campo} disabled={!a.edita} /></td>
+                        <td className="text-right text-xs text-slate-500">{totalReal ? `${pct(rec(l.id) / totalReal)} do valor vendido` : "—"}{ticketReal ? ` · ticket ${fmtReais(ticketReal)}` : ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-1 text-xs text-slate-500">{mix ? `Ticket médio ponderado: ${fmtReais(mix.ticketMedio)} (soma das participações: ${mix.somaPct.toLocaleString("pt-BR")}%, ajustada para 100%). ` : ""}Informe a fatia do <b>faturamento</b> (não das vendas) que cada linha deve ter. Com ticket e participação em todas, o equilíbrio, a meta e a projeção usam esse mix.</p>
+              {a.edita && <Botao className="mt-2 rounded bg-brand px-3 py-1 text-sm text-white">Salvar tickets e participação</Botao>}
+            </form>
           )}
           {a.edita && (
             <div className="flex flex-wrap items-center gap-2">

@@ -122,3 +122,15 @@ export async function salvarVinculos(clienteId: string, form: FormData) {
   }
   revalidatePath(`/financas/${clienteId}/growth`);
 }
+
+// Ticket médio (R$) e participação no faturamento (%) de cada linha: campos "ticket:<id>" e "part:<id>"
+export async function salvarConfigLinhas(clienteId: string, form: FormData) {
+  await acessoEdicao(clienteId);
+  const linhas = await db.select().from(growthLinhas).where(eq(growthLinhas.clienteId, clienteId));
+  for (const l of linhas) {
+    const ticket = vazio(form, `ticket:${l.id}`) ? null : parseReais(String(form.get(`ticket:${l.id}`)));
+    const part = parsePctBps(String(form.get(`part:${l.id}`) ?? ""));
+    await db.update(growthLinhas).set({ ticketCentavos: ticket, participacaoBps: part }).where(eq(growthLinhas.id, l.id));
+  }
+  revalidatePath(`/financas/${clienteId}/growth`);
+}

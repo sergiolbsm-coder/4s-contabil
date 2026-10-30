@@ -84,3 +84,13 @@ export function sugerirLinha(campanha: string, linhas: { id: string; nome: strin
   return linhas.find((l) => c.includes(` ${semAcento(l.nome)} `))?.id ?? null;
 }
 export const LINHAS_SUGERIDAS = ["Café com RH", "Recolocação", "Turma aberta", "In Company"];
+
+// Ticket médio ponderado pelo mix de faturamento: faturamento total ÷ nº de vendas = 1 / Σ(fatia_i ÷ ticket_i)
+export function mixDasLinhas<T extends { ticketCentavos: number | null; participacaoBps: number | null }>(linhas: T[]) {
+  const validas = linhas.filter((l) => (l.ticketCentavos ?? 0) > 0 && (l.participacaoBps ?? 0) > 0);
+  const total = validas.reduce((t, l) => t + (l.participacaoBps ?? 0), 0);
+  if (!validas.length || total <= 0) return null;
+  const itens = validas.map((l) => ({ linha: l, fatia: (l.participacaoBps ?? 0) / total }));
+  const vendasPorReal = itens.reduce((t, i) => t + i.fatia / (i.linha.ticketCentavos as number), 0);
+  return { itens, ticketMedio: Math.round(1 / vendasPorReal), somaPct: total / 100 };
+}
