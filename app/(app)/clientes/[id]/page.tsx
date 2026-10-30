@@ -36,6 +36,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
 
       <div className="flex flex-wrap gap-4 text-sm">
         <Link href={`/entregas/nova?cliente=${id}`} className="underline">Nova entrega (guia/demonstrativo)</Link>
+        {" · "}<Link href={`/financas/${id}`} className="underline">Finanças</Link>
         <Link href={`/entregas?cliente=${id}`} className="underline">Ver entregas</Link>
         <Link href={`/clientes/${id}/indicadores`} className="underline">Indicadores mensais</Link>
         {ehAdmin(u.papel) && <Link href={`/usuarios?cliente=${id}`} className="underline">Criar acesso do cliente</Link>}

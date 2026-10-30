@@ -283,3 +283,164 @@ export const chamadoDocumentos = pgTable(
   },
   (t) => [index("chamado_docs_chamado_idx").on(t.chamadoId)],
 );
+
+// ───────────── Finanças do cliente (contas a pagar/receber, DRE, DP) ─────────────
+
+export const GRUPOS_DRE = ["receita", "deducoes", "custos", "despesas", "financeiro", "fora_dre"] as const;
+export type GrupoDre = (typeof GRUPOS_DRE)[number];
+
+export const finCategorias = pgTable(
+  "fin_categorias",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    tipo: varchar("tipo", { length: 10 }).$type<"receber" | "pagar">().notNull(),
+    grupo: varchar("grupo", { length: 20 }).$type<GrupoDre>().notNull(),
+    ativo: boolean("ativo").notNull().default(true),
+  },
+  (t) => [index("fin_cat_cliente_idx").on(t.clienteId), uniqueIndex("fin_cat_nome_uq").on(t.clienteId, t.tipo, t.nome)],
+);
+
+export const finContas = pgTable(
+  "fin_contas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 120 }).notNull(),
+    saldoInicialCentavos: integer("saldo_inicial_centavos").notNull().default(0),
+    ativo: boolean("ativo").notNull().default(true),
+  },
+  (t) => [index("fin_contas_cliente_idx").on(t.clienteId)],
+);
+
+export const finRecorrencias = pgTable(
+  "fin_recorrencias",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    tipo: varchar("tipo", { length: 10 }).$type<"receber" | "pagar">().notNull(),
+    descricao: varchar("descricao", { length: 200 }).notNull(),
+    parceiro: varchar("parceiro", { length: 160 }),
+    categoriaId: uuid("categoria_id").references(() => finCategorias.id, { onDelete: "set null" }),
+    valorCentavos: integer("valor_centavos").notNull(),
+    diaVencimento: integer("dia_vencimento").notNull(),
+    inicio: varchar("inicio", { length: 7 }).notNull(), // AAAA-MM
+    fim: varchar("fim", { length: 7 }),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [index("fin_rec_cliente_idx").on(t.clienteId)],
+);
+
+export const finLancamentos = pgTable(
+  "fin_lancamentos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    tipo: varchar("tipo", { length: 10 }).$type<"receber" | "pagar">().notNull(),
+    descricao: varchar("descricao", { length: 200 }).notNull(),
+    parceiro: varchar("parceiro", { length: 160 }),
+    parceiroTelefone: varchar("parceiro_telefone", { length: 40 }),
+    categoriaId: uuid("categoria_id").references(() => finCategorias.id, { onDelete: "set null" }),
+    contaId: uuid("conta_id").references(() => finContas.id, { onDelete: "set null" }),
+    recorrenciaId: uuid("recorrencia_id").references(() => finRecorrencias.id, { onDelete: "set null" }),
+    valorCentavos: integer("valor_centavos").notNull(),
+    vencimento: date("vencimento").notNull(),
+    competencia: varchar("competencia", { length: 7 }).notNull(), // AAAA-MM (regime de competência, usada no DRE)
+    pagoEm: date("pago_em"),
+    valorPagoCentavos: integer("valor_pago_centavos"),
+    observacao: text("observacao"),
+    criadoPor: uuid("criado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [
+    index("fin_lanc_cliente_venc_idx").on(t.clienteId, t.vencimento),
+    index("fin_lanc_escritorio_idx").on(t.escritorioId),
+    uniqueIndex("fin_lanc_rec_comp_uq").on(t.recorrenciaId, t.competencia),
+  ],
+);
+
+export const funcionarios = pgTable(
+  "funcionarios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    nome: varchar("nome", { length: 160 }).notNull(),
+    cpf: varchar("cpf", { length: 14 }),
+    cargo: varchar("cargo", { length: 120 }),
+    vinculo: varchar("vinculo", { length: 20 }).$type<"clt" | "estagio" | "pro_labore" | "autonomo" | "pj">().notNull().default("clt"),
+    admissao: date("admissao"),
+    desligamento: date("desligamento"),
+    salarioBaseCentavos: integer("salario_base_centavos"),
+    jornadaSemanalHoras: integer("jornada_semanal_horas"),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [index("func_cliente_idx").on(t.clienteId)],
+);
+
+export const TIPOS_HORA = {
+  normal: "Horas normais", extra_50: "Hora extra 50%", extra_100: "Hora extra 100%", noturno: "Adicional noturno",
+  falta: "Falta", atestado: "Atestado", banco_credito: "Banco de horas (crédito)", banco_debito: "Banco de horas (débito)",
+} as const;
+export type TipoHora = keyof typeof TIPOS_HORA;
+
+export const finHoras = pgTable(
+  "fin_horas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    funcionarioId: uuid("funcionario_id").notNull().references(() => funcionarios.id, { onDelete: "cascade" }),
+    data: date("data").notNull(),
+    tipo: varchar("tipo", { length: 20 }).$type<TipoHora>().notNull().default("normal"),
+    minutos: integer("minutos").notNull(),
+    observacao: varchar("observacao", { length: 200 }),
+    criadoPor: uuid("criado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [index("horas_func_data_idx").on(t.funcionarioId, t.data)],
+);
+
+export const TIPOS_BENEFICIO = {
+  vale_transporte: "Vale-transporte", vale_refeicao: "Vale-refeição", vale_alimentacao: "Vale-alimentação",
+  plano_saude: "Plano de saúde", plano_odonto: "Plano odontológico", seguro_vida: "Seguro de vida",
+  comissao: "Comissão", bonus: "Bônus/Premiação", adiantamento: "Adiantamento", outro: "Outro",
+} as const;
+export type TipoBeneficio = keyof typeof TIPOS_BENEFICIO;
+
+export const finBeneficios = pgTable(
+  "fin_beneficios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    funcionarioId: uuid("funcionario_id").notNull().references(() => funcionarios.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    tipo: varchar("tipo", { length: 20 }).$type<TipoBeneficio>().notNull(),
+    descricao: varchar("descricao", { length: 200 }),
+    valorCentavos: integer("valor_centavos").notNull(),
+    criadoPor: uuid("criado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => [index("benef_func_comp_idx").on(t.funcionarioId, t.competencia)],
+);
+
+// Registro de que o cliente (ou a equipe) enviou o pacote do mês para o fechamento contábil
+export const finEnvios = pgTable(
+  "fin_envios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    enviadoEm: timestamp("enviado_em").defaultNow().notNull(),
+    enviadoPor: uuid("enviado_por").references(() => usuarios.id, { onDelete: "set null" }),
+    observacao: text("observacao"),
+  },
+  (t) => [uniqueIndex("fin_envios_uq").on(t.clienteId, t.competencia)],
+);

@@ -17,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? [
           { href: "/clientes", rotulo: "Clientes", filhos: [{ href: "/clientes", rotulo: "Todos os clientes" }, ...(edita ? [{ href: "/clientes/novo", rotulo: "Novo cliente" }] : [])] },
           { href: "/onboarding", rotulo: "Onboarding" },
+          { href: "/financas", rotulo: "Finanças dos clientes" },
           {
             href: "/chamados", rotulo: "Chamados",
             filhos: [{ href: "/chamados", rotulo: "Em aberto" }, { href: "/chamados?vista=kanban", rotulo: "Quadro Kanban" }, { href: "/chamados?todos=1", rotulo: "Incluir resolvidos" }, { href: "/chamados/novo", rotulo: "Novo chamado" }],
@@ -37,6 +38,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ]
       : u.papel === "cliente"
         ? [
+            ...(u.clienteId ? [{ href: `/financas/${u.clienteId}`, rotulo: "Finanças", filhos: [
+              { href: `/financas/${u.clienteId}`, rotulo: "Painel" }, { href: `/financas/${u.clienteId}/pagar`, rotulo: "Contas a pagar" }, { href: `/financas/${u.clienteId}/receber`, rotulo: "Contas a receber" },
+              { href: `/financas/${u.clienteId}/fluxo`, rotulo: "Fluxo de caixa" }, { href: `/financas/${u.clienteId}/dre`, rotulo: "DRE" }, { href: `/financas/${u.clienteId}/avisos`, rotulo: "Avisos" },
+              { href: `/financas/${u.clienteId}/funcionarios`, rotulo: "Funcionários" }, { href: `/financas/${u.clienteId}/fechamento`, rotulo: "Fechamento" },
+            ] }] : []),
             { href: "/portal/indicadores", rotulo: "Indicadores" },
             { href: "/portal", rotulo: "Meus documentos" },
             { href: "/portal/chamados", rotulo: "Meus chamados", filhos: [{ href: "/portal/chamados", rotulo: "Acompanhar" }, { href: "/portal/chamados/novo", rotulo: "Abrir chamado" }] },
