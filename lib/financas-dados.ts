@@ -14,19 +14,35 @@ export async function carregarBase(clienteId: string) {
   return { lancs, cats, contas };
 }
 
+export type Bloco = "operacional" | "investimentos" | "socios";
+export const BLOCO_ROTULO: Record<Bloco, string> = { operacional: "Operacional", investimentos: "Investimentos e aplicações", socios: "Sócios (aportes e retiradas)" };
+
+// Bloco do fluxo de caixa: categorias "fora do DRE" que citam sócio vão para Sócios, as demais para Investimentos;
+// o resto (incluindo lançamentos sem categoria) é operacional.
+export function classificarBloco(cats: { id: string; nome: string; grupo: GrupoDre }[]) {
+  const por = new Map(cats.map((c) => [c.id, c]));
+  return (l: Lanc): Bloco => {
+    const c = l.categoriaId ? por.get(l.categoriaId) : null;
+    if (!c || c.grupo !== "fora_dre") return "operacional";
+    return /s[óo]cio/i.test(c.nome) ? "socios" : "investimentos";
+  };
+}
+
 const sinal = (l: Lanc) => (l.tipo === "receber" ? 1 : -1);
 
 // Fluxo de caixa por mês: realizado (pago) + previsto (em aberto, pelo vencimento).
-export function fluxoMensal(lancs: Lanc[], saldoInicial: number, de: string, ate: string) {
+export function fluxoMensal(lancs: Lanc[], saldoInicial: number, de: string, ate: string, bloco?: (l: Lanc) => Bloco) {
   const mesCaixa = (l: Lanc) => (l.pagoEm ?? l.vencimento).slice(0, 7);
   let saldo = saldoInicial + lancs.filter((l) => mesCaixa(l) < de).reduce((s, l) => s + sinal(l) * valorEfetivo(l), 0);
-  const meses: { mes: string; entradas: number; saidas: number; entradasPrev: number; saidasPrev: number; saldo: number }[] = [];
+  const meses: { mes: string; entradas: number; saidas: number; entradasPrev: number; saidasPrev: number; saldo: number; blocos: Record<Bloco, { entradas: number; saidas: number }> }[] = [];
   for (let m = de; m <= ate; m = somarMeses(m, 1)) {
     const doMes = lancs.filter((l) => mesCaixa(l) === m);
     const soma = (tipo: "receber" | "pagar", pago: boolean) => doMes.filter((l) => l.tipo === tipo && !!l.pagoEm === pago).reduce((s, l) => s + valorEfetivo(l), 0);
     const e = soma("receber", true), s = soma("pagar", true), ep = soma("receber", false), sp = soma("pagar", false);
     saldo += e + ep - s - sp;
-    meses.push({ mes: m, entradas: e, saidas: s, entradasPrev: ep, saidasPrev: sp, saldo });
+    const blocos: Record<Bloco, { entradas: number; saidas: number }> = { operacional: { entradas: 0, saidas: 0 }, investimentos: { entradas: 0, saidas: 0 }, socios: { entradas: 0, saidas: 0 } };
+    for (const l of doMes) blocos[bloco ? bloco(l) : "operacional"][l.tipo === "receber" ? "entradas" : "saidas"] += valorEfetivo(l);
+    meses.push({ mes: m, entradas: e, saidas: s, entradasPrev: ep, saidasPrev: sp, saldo, blocos });
   }
   return meses;
 }

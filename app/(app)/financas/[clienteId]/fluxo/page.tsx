@@ -1,5 +1,5 @@
 import { acessoFinancas, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
-import { carregarBase, fluxoMensal } from "@/lib/financas-dados";
+import { BLOCO_ROTULO, carregarBase, classificarBloco, fluxoMensal, type Bloco } from "@/lib/financas-dados";
 import { fmtReais } from "@/lib/dinheiro";
 import { GraficoFluxo } from "../../grafico";
 
@@ -10,7 +10,7 @@ export default async function Fluxo({ params }: { params: Promise<{ clienteId: s
   await acessoFinancas(clienteId);
   const base = await carregarBase(clienteId);
   const saldoInicial = base.contas.reduce((s, c) => s + c.saldoInicialCentavos, 0);
-  const meses = fluxoMensal(base.lancs, saldoInicial, somarMeses(mesAtual(), -5), somarMeses(mesAtual(), 6));
+  const meses = fluxoMensal(base.lancs, saldoInicial, somarMeses(mesAtual(), -5), somarMeses(mesAtual(), 6), classificarBloco(base.cats));
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Fluxo de caixa</h2>
@@ -31,6 +31,33 @@ export default async function Fluxo({ params }: { params: Promise<{ clienteId: s
                 </tr>
               );
             })}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="pt-2 font-semibold">Por tipo de movimentação</h3>
+      <p className="text-sm text-slate-500">Separa o que vem do dia a dia da empresa do que é investimento ou movimentação dos sócios. Categorias “fora do DRE” que citam sócio entram em Sócios; as demais, em Investimentos.</p>
+      <div className="overflow-x-auto rounded-xl border bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b bg-slate-50 text-slate-500">
+            <tr><th className="p-3">Mês</th>{(Object.keys(BLOCO_ROTULO) as Bloco[]).map((b) => <th key={b} className="p-3 text-right text-xs">{BLOCO_ROTULO[b]}<div className="font-normal">entradas − saídas</div></th>)}</tr>
+          </thead>
+          <tbody>
+            {meses.map((m) => (
+              <tr key={m.mes} className="border-b last:border-0">
+                <td className="p-3 capitalize">{mesLongo(m.mes)}</td>
+                {(Object.keys(BLOCO_ROTULO) as Bloco[]).map((b) => {
+                  const { entradas, saidas } = m.blocos[b];
+                  const liq = entradas - saidas;
+                  return (
+                    <td key={b} className="p-3 text-right">
+                      <div className={`font-medium ${liq < 0 ? "text-red-600" : ""}`}>{fmtReais(liq)}</div>
+                      {(entradas > 0 || saidas > 0) && <div className="text-xs text-slate-500">{fmtReais(entradas)} − {fmtReais(saidas)}</div>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
