@@ -4,7 +4,7 @@ import {
   acessoFinancas, mesAtual, mesLongo, situacao, SITUACAO_ROTULO, somarMeses, valorEfetivo, hojeISO,
 } from "@/lib/financas";
 import { carregarBase } from "@/lib/financas-dados";
-import { baixarLancamento, criarLancamento, estornarLancamento, excluirLancamento } from "@/lib/financas-actions";
+import { baixarLancamento, criarLancamento, editarLancamento, estornarLancamento, excluirLancamento } from "@/lib/financas-actions";
 import { fmtReais, reaisParaCampo } from "@/lib/dinheiro";
 import { fmtData } from "@/lib/entregas";
 
@@ -88,6 +88,25 @@ export async function ListaLancamentos({ clienteId, tipo, sp }: { clienteId: str
                             </form>
                           </details>
                         )}
+                        <details>
+                          <summary className="cursor-pointer underline">Editar</summary>
+                          <form action={editarLancamento.bind(null, clienteId, l.id)} className="mt-1 flex w-64 flex-col gap-1">
+                            <input name="descricao" defaultValue={l.descricao} required className={campo} />
+                            <input name="valor" defaultValue={reaisParaCampo(l.valorCentavos)} required className={campo} />
+                            <input name="vencimento" type="date" defaultValue={l.vencimento} required className={campo} />
+                            <input name="parceiro" defaultValue={l.parceiro ?? ""} placeholder={tipo === "pagar" ? "Fornecedor" : "Cliente"} className={campo} />
+                            {tipo === "receber" && <input name="telefone" defaultValue={l.parceiroTelefone ?? ""} placeholder="WhatsApp" className={campo} />}
+                            <select name="categoria" defaultValue={l.categoriaId ?? ""} className={campo}><option value="">Categoria…</option>{catsTipo.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+                            <select name="conta" defaultValue={l.contaId ?? ""} className={campo}><option value="">Conta bancária…</option>{base.contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+                            {l.recorrenciaId && (
+                              <select name="escopo" defaultValue="este" className={campo}>
+                                <option value="este">Só este mês</option>
+                                <option value="proximos">Este e os próximos meses</option>
+                              </select>
+                            )}
+                            <Botao className="rounded bg-brand px-2 py-1 text-white">Salvar alterações</Botao>
+                          </form>
+                        </details>
                         <form action={excluirLancamento.bind(null, clienteId, l.id)}><Botao className="text-red-600 underline">Excluir</Botao></form>
                       </div>
                     </td>

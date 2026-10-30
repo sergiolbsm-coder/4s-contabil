@@ -66,6 +66,38 @@ export async function criarLancamento(clienteId: string, tipo: "pagar" | "recebe
   atualizar(clienteId);
 }
 
+export async function editarLancamento(clienteId: string, id: string, form: FormData) {
+  const a = await acessoEdicao(clienteId);
+  if (!idValido(id)) return;
+  const [l] = await db.select().from(finLancamentos).where(and(eq(finLancamentos.id, id), eq(finLancamentos.clienteId, clienteId)));
+  if (!l) return;
+  const descricao = texto(form, "descricao");
+  const valor = parseReais(String(form.get("valor") ?? ""));
+  const venc = String(form.get("vencimento") ?? "");
+  if (!descricao || !valor || !dataValida(venc)) return;
+  const categoriaId = await categoriaDoCliente(clienteId, texto(form, "categoria") || null);
+  const contaId = await contaDoCliente(clienteId, texto(form, "conta") || null);
+  const parceiro = texto(form, "parceiro", 160) || null;
+  await db.update(finLancamentos).set({
+    descricao, valorCentavos: valor, vencimento: venc, categoriaId, contaId, parceiro,
+    parceiroTelefone: texto(form, "telefone", 40) || null, observacao: texto(form, "observacao", 500) || null,
+  }).where(eq(finLancamentos.id, id));
+
+  // "Este e os próximos": a recorrência passa a valer com os novos dados e os meses futuros em aberto são ajustados
+  if (l.recorrenciaId && texto(form, "escopo") === "proximos") {
+    const dia = Number(venc.slice(8, 10));
+    await db.update(finRecorrencias).set({ descricao, parceiro, categoriaId, valorCentavos: valor, diaVencimento: dia })
+      .where(and(eq(finRecorrencias.id, l.recorrenciaId), eq(finRecorrencias.clienteId, clienteId)));
+    const futuros = await db.select({ id: finLancamentos.id, competencia: finLancamentos.competencia }).from(finLancamentos)
+      .where(and(eq(finLancamentos.recorrenciaId, l.recorrenciaId), gt(finLancamentos.competencia, l.competencia), isNull(finLancamentos.pagoEm)));
+    for (const f of futuros) {
+      await db.update(finLancamentos).set({ descricao, parceiro, categoriaId, valorCentavos: valor, vencimento: diaDoMes(f.competencia, dia) }).where(eq(finLancamentos.id, f.id));
+    }
+  }
+  await db.insert(auditoria).values({ usuarioId: a.u.id, escritorioId: a.escritorioId, acao: "editar", entidade: "fin_lancamento", entidadeId: id });
+  atualizar(clienteId);
+}
+
 export async function baixarLancamento(clienteId: string, id: string, form: FormData) {
   await acessoEdicao(clienteId);
   if (!idValido(id)) return;

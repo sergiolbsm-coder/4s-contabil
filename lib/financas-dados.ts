@@ -41,7 +41,7 @@ export function dreMes(lancs: Lanc[], cats: { id: string; nome: string; grupo: G
     const c = l.categoriaId ? por.get(l.categoriaId) : null;
     const grupo: GrupoDre = c?.grupo ?? (l.tipo === "receber" ? "receita" : "despesas");
     if (!c) semCategoria += 1;
-    const v = l.valorCentavos;
+    const v = valorEfetivo(l); // valor real quando já pago
     // financeiro: receitas financeiras somam, despesas financeiras subtraem
     const assinado = grupo === "financeiro" ? sinal(l) * v : v;
     grupos[grupo] += assinado;
