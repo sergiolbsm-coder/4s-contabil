@@ -58,6 +58,11 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                     <li key={it.texto} className="flex flex-wrap items-center gap-2">
                       <span aria-hidden>{it.feito ? "✔" : "○"}</span>
                       <span className={it.feito ? "text-slate-400 line-through" : ""}>{it.texto}</span>
+                      {it.docId && edita && (
+                        <form action={alternarDocumento.bind(null, clienteId, it.docId)} className="ml-auto">
+                          <button className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</button>
+                        </form>
+                      )}
                       {it.alternar && edita && (
                         <form action={alternarMovimentacao.bind(null, clienteId)} className="ml-auto">
                           <button className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</button>
@@ -69,46 +74,29 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                     </li>
                   ))}
                 </ul>
+                {e.chave === "documentos" && edita && (
+                  <form action={adicionarDocumento.bind(null, clienteId)} className="ml-6 mt-2 flex gap-2">
+                    <input name="nome" placeholder="Outro documento" required className={`${campo} flex-1`} />
+                    <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+                  </form>
+                )}
+                {e.chave === "diagnostico" && (
+                  <details open={!ok} className="ml-6 mt-2">
+                    <summary className="cursor-pointer text-xs underline">{ok ? "Ver respostas" : "Responder agora"}</summary>
+                    <form action={salvarDiagnostico.bind(null, clienteId)} className="mt-2 space-y-3">
+                      {PERGUNTAS_DIAGNOSTICO.map((p) => (
+                        <label key={p.chave} className="block">{p.texto}
+                          <textarea name={p.chave} rows={2} defaultValue={respostas[p.chave] ?? ""} disabled={!edita} className="mt-1 w-full rounded border px-2 py-1" />
+                        </label>
+                      ))}
+                      {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar diagnóstico</button>}
+                    </form>
+                  </details>
+                )}
               </li>
             );
           })}
         </ol>
-      </section>
-
-      <section id="diagnostico">
-        <h2 className="mb-2 font-semibold">Diagnóstico</h2>
-        <form action={salvarDiagnostico.bind(null, clienteId)} className="space-y-3 rounded-xl border bg-white p-4 text-sm">
-          {PERGUNTAS_DIAGNOSTICO.map((p) => (
-            <label key={p.chave} className="block">{p.texto}
-              <textarea name={p.chave} rows={2} defaultValue={respostas[p.chave] ?? ""} disabled={!edita} className="mt-1 w-full rounded border px-2 py-1" />
-            </label>
-          ))}
-          {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar diagnóstico</button>}
-        </form>
-      </section>
-
-      <section id="documentos">
-        <h2 className="mb-2 font-semibold">Documentos</h2>
-        <ul className="mb-3 divide-y rounded-xl border bg-white text-sm">
-          {docs.map((d) => (
-            <li key={d.id} className="flex items-center justify-between p-3">
-              <span className={d.recebido ? "text-slate-400 line-through" : ""}>{d.nome}</span>
-              {edita ? (
-                <form action={alternarDocumento.bind(null, clienteId, d.id)}>
-                  <button className="underline">{d.recebido ? "desfazer" : "marcar recebido"}</button>
-                </form>
-              ) : (
-                <span>{d.recebido ? "recebido" : "pendente"}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-        {edita && (
-          <form action={adicionarDocumento.bind(null, clienteId)} className="flex gap-2">
-            <input name="nome" placeholder="Outro documento" required className={`${campo} flex-1`} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
-          </form>
-        )}
       </section>
     </div>
   );

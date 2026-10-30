@@ -1,6 +1,6 @@
 import { PERGUNTAS_DIAGNOSTICO } from "@/lib/onboarding";
 
-export type ItemTrilha = { texto: string; feito: boolean; href?: string; acao?: string; alternar?: "movimentacao" };
+export type ItemTrilha = { texto: string; feito: boolean; href?: string; acao?: string; alternar?: "movimentacao"; docId?: string };
 export type EtapaTrilha = { chave: string; titulo: string; itens: ItemTrilha[]; manual: boolean };
 
 type Dados = {
@@ -8,7 +8,7 @@ type Dados = {
   cliente: { cnpj: string | null; regime: string; responsavelId: string | null; certificadoValidade: string | null; status: string };
   contatos: { email: string | null; telefone: string | null; principal: number }[];
   contratos: { valorMensalCentavos: number | null; status: string }[];
-  documentos: { nome: string; recebido: boolean }[];
+  documentos: { id: string; nome: string; recebido: boolean }[];
   respostas: Record<string, string>;
   fechamentosPublicados: number;
   entregas: number;
@@ -21,7 +21,6 @@ export function montarTrilha(d: Dados): EtapaTrilha[] {
   const cli = `/clientes/${d.clienteId}`;
   const concluida = (chave: string) => d.etapas.find((e) => e.chave === chave)?.status === "concluida";
   const respondidas = PERGUNTAS_DIAGNOSTICO.filter((p) => (d.respostas[p.chave] ?? "").trim()).length;
-  const pendentes = d.documentos.filter((x) => !x.recebido);
   const comValor = d.contratos.some((c) => (c.valorMensalCentavos ?? 0) > 0);
 
   return [
@@ -37,13 +36,12 @@ export function montarTrilha(d: Dados): EtapaTrilha[] {
     },
     {
       chave: "diagnostico", titulo: "Diagnóstico", manual: false,
-      itens: [{ texto: `Perguntas respondidas (${respondidas}/${PERGUNTAS_DIAGNOSTICO.length})`, feito: respondidas === PERGUNTAS_DIAGNOSTICO.length, href: "#diagnostico", acao: "Responder" }],
+      itens: [{ texto: `Perguntas respondidas (${respondidas}/${PERGUNTAS_DIAGNOSTICO.length})`, feito: respondidas === PERGUNTAS_DIAGNOSTICO.length }],
     },
     {
       chave: "documentos", titulo: "Documentos", manual: false,
       itens: [
-        ...pendentes.map((x) => ({ texto: `Receber: ${x.nome}`, feito: false, href: "#documentos", acao: "Marcar recebido" })),
-        ...(pendentes.length === 0 ? [{ texto: `Todos os documentos recebidos (${d.documentos.length})`, feito: true }] : []),
+        ...d.documentos.map((x) => ({ texto: x.recebido ? x.nome : `Receber: ${x.nome}`, feito: x.recebido, docId: x.id, acao: "Marcar recebido" })),
         { texto: "Validade do certificado digital registrada", feito: !!d.cliente.certificadoValidade, href: cli, acao: "Registrar" },
       ],
     },
