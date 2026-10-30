@@ -1,0 +1,1 @@
+ALTER TABLE "growth_premissas" ADD COLUMN "faturamento_atual_centavos" integer;

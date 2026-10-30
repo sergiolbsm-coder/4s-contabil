@@ -33,7 +33,7 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
   const temReal = receita3 > 0;
   const varReal = temReal ? (ult3.reduce((s, d) => s + d.grupos.deducoes + d.grupos.custos, 0)) / receita3 : null;
   const fixosReal = temReal ? Math.round(ult3.reduce((s, d) => s + d.grupos.despesas, 0) / 3) : null;
-  const receitaBase = temReal ? Math.round(receita3 / 3) : 0;
+  const receitaBase = pr?.faturamentoAtualCentavos ?? (temReal ? Math.round(receita3 / 3) : 0);
 
   const p: Premissas = {
     ticket: pr?.ticketMedioCentavos ?? 0,
@@ -58,7 +58,7 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
   ] : [];
   const semMidia = equilibrioSemMidia(p);
   const plano = metaAtual && p.ticket > 0 ? planoDaMeta(p, metaAtual) : null;
-  const proj = pronto && temReal ? projecao(p, receitaBase, (pr?.crescimentoMensalBps ?? 0) / 10000, mes) : null;
+  const proj = pronto && receitaBase > 0 ? projecao(p, receitaBase, (pr?.crescimentoMensalBps ?? 0) / 10000, mes) : null;
   const historico = [5, 4, 3, 2, 1, 0].map((i) => somarMeses(mes, -i)).map((c) => {
     const m = mensal.find((x) => x.competencia === c);
     const real = dreMes(base.lancs, base.cats, c).grupos.receita;
@@ -81,6 +81,8 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
             <input name="varPct" defaultValue={fmtPct(pr?.custosVariaveisBps)} className={campo} disabled={!a.edita} /></Rotulo>
           <Rotulo t="Custos fixos por mês (R$)" dica={fixosReal != null ? `Real (média 3 meses): ${fmtReais(fixosReal)}. Deixe vazio para usar.` : "Aluguel, equipe, ferramentas, etc."}>
             <input name="fixos" defaultValue={reaisParaCampo(pr?.custosFixosCentavos)} className={campo} disabled={!a.edita} /></Rotulo>
+          <Rotulo t="Faturamento atual por mês (R$)" dica={temReal ? `Real (média 3 meses): ${fmtReais(Math.round(receita3 / 3))}. Deixe vazio para usar.` : "Sem receita lançada em Finanças: informe a média mensal atual. É a base da projeção."}>
+            <input name="atual" defaultValue={reaisParaCampo(pr?.faturamentoAtualCentavos)} className={campo} disabled={!a.edita} /></Rotulo>
           <Rotulo t="Meta de faturamento por mês (R$)"><input name="meta" defaultValue={reaisParaCampo(pr?.metaFaturamentoCentavos)} className={campo} disabled={!a.edita} /></Rotulo>
           <Rotulo t="Crescimento mensal esperado (%)" dica="Usado na projeção"><input name="crescimento" defaultValue={fmtPct(pr?.crescimentoMensalBps)} className={campo} disabled={!a.edita} /></Rotulo>
           <div className="space-y-2">
@@ -202,10 +204,12 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
         )}
       </section>
 
+      {pronto && !proj && <p className="rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm">Para ver a <b>projeção de 12 meses</b>, informe o <b>faturamento atual por mês</b> nas premissas (ou lance receitas em Finanças nos últimos 3 meses).</p>}
+
       {proj && (
         <section className="rounded-xl border bg-white p-4">
           <h3 className="mb-1 font-semibold">5. Projeção dos próximos 12 meses</h3>
-          <p className="mb-3 text-sm text-slate-500">Parte do faturamento médio atual ({fmtReais(receitaBase)}) crescendo {pct((pr?.crescimentoMensalBps ?? 0) / 10000)} ao mês, com as premissas acima. {proj.primeiroLucro ? `Primeiro mês com lucro: ${mesLongo(proj.primeiroLucro)}.` : "Nenhum mês com lucro nesse cenário."}</p>
+          <p className="mb-3 text-sm text-slate-500">Parte do faturamento atual ({fmtReais(receitaBase)}) crescendo {pct((pr?.crescimentoMensalBps ?? 0) / 10000)} ao mês, com as premissas acima. {proj.primeiroLucro ? `Primeiro mês com lucro: ${mesLongo(proj.primeiroLucro)}.` : "Nenhum mês com lucro nesse cenário."}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b text-slate-500"><tr><th className="py-2">Mês</th><th className="text-right">Faturamento</th>{p.usaMidia && <th className="text-right">Mídia</th>}<th className="text-right">Resultado</th><th className="text-right">Acumulado</th></tr></thead>

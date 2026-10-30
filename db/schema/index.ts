@@ -459,6 +459,7 @@ export const growthPremissas = pgTable("growth_premissas", {
   custosVariaveisBps: integer("custos_variaveis_bps"), // vazio = calcula do DRE real
   custosFixosCentavos: integer("custos_fixos_centavos"), // vazio = média das despesas reais
   metaFaturamentoCentavos: integer("meta_faturamento_centavos"),
+  faturamentoAtualCentavos: integer("faturamento_atual_centavos"), // vazio = média dos 3 últimos meses do DRE
   crescimentoMensalBps: integer("crescimento_mensal_bps").notNull().default(0),
   atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
 });

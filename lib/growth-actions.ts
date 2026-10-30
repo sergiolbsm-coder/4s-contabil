@@ -22,6 +22,7 @@ export async function salvarPremissas(clienteId: string, form: FormData) {
     usaMidia: form.get("usaMidia") === "on",
     custosVariaveisBps: parsePctBps(String(form.get("varPct") ?? "")),
     custosFixosCentavos: vazio(form, "fixos") ? null : parseReais(String(form.get("fixos"))),
+    faturamentoAtualCentavos: vazio(form, "atual") ? null : parseReais(String(form.get("atual"))),
     metaFaturamentoCentavos: vazio(form, "meta") ? null : parseReais(String(form.get("meta"))),
     crescimentoMensalBps: parsePctBps(String(form.get("crescimento") ?? "")) ?? 0,
     atualizadoEm: new Date(),

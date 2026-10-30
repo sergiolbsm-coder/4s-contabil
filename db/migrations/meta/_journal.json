@@ -78,6 +78,13 @@
       "when": 1793376185612,
       "tag": "0010_stormy_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793377056794,
+      "tag": "0011_flowery_rhodey",
+      "breakpoints": true
     }
   ]
 }
