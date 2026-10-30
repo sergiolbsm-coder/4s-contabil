@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import { useActionState } from "react";
 
 type Estado = { erro?: string } | undefined;
@@ -48,9 +49,9 @@ export function ClienteForm({
         <textarea name="observacoes" rows={3} defaultValue={valores.observacoes ?? ""} className={campo} />
       </label>
       {state?.erro && <p className="text-sm text-red-600 sm:col-span-2">{state.erro}</p>}
-      <button disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">
+      <Botao disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">
         {pending ? "Salvando…" : rotuloBotao}
-      </button>
+      </Botao>
     </form>
   );
 }

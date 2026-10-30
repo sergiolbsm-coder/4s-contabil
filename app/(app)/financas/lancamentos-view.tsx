@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import {
   acessoFinancas, mesAtual, mesLongo, situacao, SITUACAO_ROTULO, somarMeses, valorEfetivo, hojeISO,
@@ -53,7 +54,7 @@ export async function ListaLancamentos({ clienteId, tipo, sp }: { clienteId: str
             <select name="repeticao" className={campo}><option value="unica">Lançamento único</option><option value="parcelado">Parcelado</option><option value="mensal">Recorrente (todo mês)</option></select>
             <input name="parcelas" type="number" min={1} max={48} placeholder="Nº de parcelas" className={campo} />
             <input name="observacao" placeholder="Observação" className={`${campo} md:col-span-2`} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar</Botao>
           </form>
         </details>
       )}
@@ -76,18 +77,18 @@ export async function ListaLancamentos({ clienteId, tipo, sp }: { clienteId: str
                     <td className="p-3">
                       <div className="flex flex-wrap items-start gap-2 text-xs">
                         {l.pagoEm ? (
-                          <form action={estornarLancamento.bind(null, clienteId, l.id)}><button className="underline">Estornar</button></form>
+                          <form action={estornarLancamento.bind(null, clienteId, l.id)}><Botao className="underline">Estornar</Botao></form>
                         ) : (
                           <details>
                             <summary className="cursor-pointer underline">{tipo === "pagar" ? "Pagar" : "Receber"}</summary>
                             <form action={baixarLancamento.bind(null, clienteId, l.id)} className="mt-1 flex flex-col gap-1">
                               <input name="data" type="date" defaultValue={hoje} className={campo} />
                               <input name="valor" defaultValue={reaisParaCampo(l.valorCentavos)} className={campo} />
-                              <button className="rounded bg-brand px-2 py-1 text-white">Confirmar</button>
+                              <Botao className="rounded bg-brand px-2 py-1 text-white">Confirmar</Botao>
                             </form>
                           </details>
                         )}
-                        <form action={excluirLancamento.bind(null, clienteId, l.id)}><button className="text-red-600 underline">Excluir</button></form>
+                        <form action={excluirLancamento.bind(null, clienteId, l.id)}><Botao className="text-red-600 underline">Excluir</Botao></form>
                       </div>
                     </td>
                   )}

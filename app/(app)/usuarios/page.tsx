@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import { asc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -45,7 +46,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   <td className="p-3">{x.ativo ? "Ativo" : "Desativado"}{x.trocarSenha && <div className="text-xs text-amber-600">aguarda 1º acesso</div>}</td>
                   <td className="space-y-1 p-3">
                     <RedefinirSenha id={x.id} />
-                    {x.id !== u.id && <form action={alternarAtivo.bind(null, x.id)}><button className="underline">{x.ativo ? "desativar" : "reativar"}</button></form>}
+                    {x.id !== u.id && <form action={alternarAtivo.bind(null, x.id)}><Botao className="underline">{x.ativo ? "desativar" : "reativar"}</Botao></form>}
                   </td>
                 </tr>
               ))}

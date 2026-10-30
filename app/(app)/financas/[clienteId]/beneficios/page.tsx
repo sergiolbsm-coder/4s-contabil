@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -31,7 +32,7 @@ export default async function Beneficios({ params, searchParams }: { params: Pro
           <select name="tipo" className={campo}>{Object.entries(TIPOS_BENEFICIO).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
           <input name="valor" placeholder="Valor (R$)" required className={campo} />
           <input name="descricao" placeholder="Descrição (opcional)" className={campo} />
-          <button className="rounded bg-brand px-3 py-1 text-sm text-white">Lançar</button>
+          <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Lançar</Botao>
         </form>
       )}
       <ul className="divide-y rounded-xl border bg-white text-sm">
@@ -39,7 +40,7 @@ export default async function Beneficios({ params, searchParams }: { params: Pro
         {lista.map(({ b, nome }) => (
           <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
             <span>{nome} · {TIPOS_BENEFICIO[b.tipo]}{b.descricao && ` · ${b.descricao}`}</span>
-            <span className="flex items-center gap-3"><b>{fmtReais(b.valorCentavos)}</b>{a.edita && <form action={excluirBeneficio.bind(null, clienteId, b.id)}><button className="text-xs text-red-600 underline">Excluir</button></form>}</span>
+            <span className="flex items-center gap-3"><b>{fmtReais(b.valorCentavos)}</b>{a.edita && <form action={excluirBeneficio.bind(null, clienteId, b.id)}><Botao className="text-xs text-red-600 underline">Excluir</Botao></form>}</span>
           </li>
         ))}
       </ul>

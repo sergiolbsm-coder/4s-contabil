@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { moverChamado } from "@/lib/chamados-actions";
@@ -96,7 +97,7 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
                     data-card={c.id}
                     className={`cursor-grab rounded-lg border border-l-4 bg-white p-2 text-sm shadow-sm ${BORDA[c.prioridade]} ${arrastando === c.id ? "opacity-40" : ""}`}
                   >
-                    <button type="button" onClick={() => setAberto(c.id)} className="text-left font-medium hover:underline">#{c.numero} · {c.titulo}</button>
+                    <Botao type="button" onClick={() => setAberto(c.id)} className="text-left font-medium hover:underline">#{c.numero} · {c.titulo}</Botao>
                     <div className="text-xs text-slate-500">{c.cliente}</div>
                     <div className="mt-1 flex flex-wrap gap-1 text-[11px]">
                       <span className="rounded bg-slate-100 px-1">{c.categoria}</span>
@@ -140,7 +141,7 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
           <aside role="dialog" aria-modal="true" aria-label="Detalhes do chamado" onClick={(e) => e.stopPropagation()} className="h-full w-full max-w-xl overflow-y-auto bg-slate-50 p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <Link href={`/chamados/${aberto}`} className="text-xs underline">Abrir em página inteira</Link>
-              <button type="button" onClick={() => setAberto(null)} className="rounded border bg-white px-2 py-1 text-sm" aria-label="Fechar painel">Fechar ✕</button>
+              <Botao type="button" onClick={() => setAberto(null)} className="rounded border bg-white px-2 py-1 text-sm" aria-label="Fechar painel">Fechar ✕</Botao>
             </div>
             <PainelChamado key={aberto} id={aberto} />
           </aside>
@@ -157,8 +158,8 @@ export function Kanban({ cards: inicial }: { cards: CardChamado[] }) {
             </label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={visivel} onChange={(e) => setVisivel(e.target.checked)} /> Mostrar estes detalhes ao cliente no portal</label>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setPendente(null)} className="rounded border px-3 py-2 text-sm">Cancelar</button>
-              <button type="button" onClick={confirmar} className="rounded bg-brand px-3 py-2 text-sm text-white">Confirmar mudança</button>
+              <Botao type="button" onClick={() => setPendente(null)} className="rounded border px-3 py-2 text-sm">Cancelar</Botao>
+              <Botao type="button" onClick={confirmar} className="rounded bg-brand px-3 py-2 text-sm text-white">Confirmar mudança</Botao>
             </div>
           </div>
         </div>

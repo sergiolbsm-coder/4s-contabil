@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -67,7 +68,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
   const dt = (d: Date) => d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   const botaoVista = (v: "lista" | "kanban", rotulo: string) => (
     <form action={definirVista.bind(null, v)}>
-      <button aria-pressed={vista === v} className={`rounded px-3 py-1 text-sm ${vista === v ? "bg-brand text-white" : "border bg-white"}`}>{rotulo}</button>
+      <Botao aria-pressed={vista === v} className={`rounded px-3 py-1 text-sm ${vista === v ? "bg-brand text-white" : "border bg-white"}`}>{rotulo}</Botao>
     </form>
   );
 
@@ -92,7 +93,7 @@ export default async function Chamados({ searchParams }: { searchParams: Promise
           </select>
         </label>
         <label className="flex items-center gap-1 py-1"><input type="checkbox" name="todos" value="1" defaultChecked={todos} /> {vista === "kanban" ? "Todos os resolvidos" : "Incluir resolvidos"}</label>
-        <button className="rounded border px-3 py-1">Filtrar</button>
+        <Botao className="rounded border px-3 py-1">Filtrar</Botao>
         <Link href="/chamados" className="py-1 underline">Limpar</Link>
       </form>
 

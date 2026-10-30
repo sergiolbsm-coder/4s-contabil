@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -90,7 +91,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
           <div className="mt-2 space-y-2">
             <textarea value={etapa.detalhe} onChange={(e) => setEtapa({ ...etapa, detalhe: e.target.value })} rows={3} maxLength={2000} placeholder="Detalhes desta etapa (opcional)" className={campo} />
             <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={etapa.visivel} onChange={(e) => setEtapa({ ...etapa, visivel: e.target.checked })} /> Mostrar os detalhes ao cliente no portal</label>
-            <button disabled={ocupado} onClick={() => executar(() => moverChamado(d.id, etapa.destino, etapa.detalhe, etapa.visivel), "Etapa atualizada.", () => setEtapa({ destino: "", detalhe: "", visivel: false }))} className="rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Confirmar mudança de etapa</button>
+            <Botao disabled={ocupado} onClick={() => executar(() => moverChamado(d.id, etapa.destino, etapa.detalhe, etapa.visivel), "Etapa atualizada.", () => setEtapa({ destino: "", detalhe: "", visivel: false }))} className="rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Confirmar mudança de etapa</Botao>
           </div>
         )}
       </section>
@@ -115,7 +116,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
           <label>Prioridade <select value={f.prioridade} onChange={(e) => setF({ ...f, prioridade: e.target.value })} className={campo}>{Object.entries(PRIORIDADES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <label className="sm:col-span-2">Descrição <textarea value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} rows={4} maxLength={4000} className={campo} /></label>
         </div>
-        <button disabled={ocupado} onClick={salvar} className="mt-2 rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Salvar alterações</button>
+        <Botao disabled={ocupado} onClick={salvar} className="mt-2 rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Salvar alterações</Botao>
       </section>
 
       <section className={caixa}>
@@ -126,7 +127,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
             <li key={x.id} className="flex items-center justify-between gap-2 p-2">
               <span className="min-w-0"><a href={x.url} target="_blank" rel="noopener noreferrer" className="font-medium underline">{x.nome}</a>
                 <span className="block text-[11px] text-slate-500">{x.visivel ? "visível ao cliente" : "interno"} · {x.autor ?? "—"} · {dt(x.criadoEm)}</span></span>
-              <button disabled={ocupado} onClick={() => executar(() => removerDocumentoChamado(d.id, x.id), "Documento removido.")} className="text-xs text-red-600 underline">remover</button>
+              <Botao disabled={ocupado} onClick={() => executar(() => removerDocumentoChamado(d.id, x.id), "Documento removido.")} className="text-xs text-red-600 underline">remover</Botao>
             </li>
           ))}
         </ul>
@@ -134,7 +135,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
           <input value={doc.nome} onChange={(e) => setDoc({ ...doc, nome: e.target.value })} placeholder="Nome do documento" className={campo} />
           <input value={doc.url} onChange={(e) => setDoc({ ...doc, url: e.target.value })} placeholder="https://drive.google.com/…" className={campo} />
           <label className="flex items-center gap-2 text-xs sm:col-span-2"><input type="checkbox" checked={doc.visivel} onChange={(e) => setDoc({ ...doc, visivel: e.target.checked })} /> Visível ao cliente no portal</label>
-          <button disabled={ocupado} onClick={() => executar(() => adicionarDocumentoChamado(d.id, doc.nome, doc.url, doc.visivel), "Documento adicionado.", () => setDoc({ nome: "", url: "", visivel: false }))} className="w-fit rounded border px-3 py-1.5">Adicionar documento</button>
+          <Botao disabled={ocupado} onClick={() => executar(() => adicionarDocumentoChamado(d.id, doc.nome, doc.url, doc.visivel), "Documento adicionado.", () => setDoc({ nome: "", url: "", visivel: false }))} className="w-fit rounded border px-3 py-1.5">Adicionar documento</Botao>
         </div>
       </section>
 
@@ -151,7 +152,7 @@ export function PainelChamado({ id, inicial, aoMudar }: { id: string; inicial?: 
         <textarea value={coment.texto} onChange={(e) => setComent({ ...coment, texto: e.target.value })} rows={2} placeholder="Adicionar comentário" className={campo} />
         <div className="mt-1 flex items-center justify-between gap-2">
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={coment.visivel} onChange={(e) => setComent({ ...coment, visivel: e.target.checked })} /> Visível ao cliente</label>
-          <button disabled={ocupado} onClick={() => executar(() => comentarPainel(d.id, coment.texto, coment.visivel), "Comentário registrado.", () => setComent({ texto: "", visivel: false }))} className="rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Comentar</button>
+          <Botao disabled={ocupado} onClick={() => executar(() => comentarPainel(d.id, coment.texto, coment.visivel), "Comentário registrado.", () => setComent({ texto: "", visivel: false }))} className="rounded bg-brand px-3 py-1.5 text-white disabled:opacity-60">Comentar</Botao>
         </div>
       </section>
     </div>

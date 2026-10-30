@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { finRecorrencias, GRUPOS_DRE } from "@/db/schema";
@@ -27,7 +28,7 @@ export default async function Cadastros({ params }: { params: Promise<{ clienteI
               {base.cats.filter((c) => c.tipo === t).sort((x, y) => x.grupo.localeCompare(y.grupo) || x.nome.localeCompare(y.nome)).map((c) => (
                 <li key={c.id} className="flex items-center justify-between gap-2 p-2 px-3">
                   <span className={c.ativo ? "" : "text-slate-400 line-through"}>{c.nome} <span className="text-xs text-slate-500">· {GRUPO_ROTULO[c.grupo].split(" (")[0]}</span></span>
-                  {a.edita && <form action={alternarCategoria.bind(null, clienteId, c.id)}><button className="text-xs underline">{c.ativo ? "desativar" : "reativar"}</button></form>}
+                  {a.edita && <form action={alternarCategoria.bind(null, clienteId, c.id)}><Botao className="text-xs underline">{c.ativo ? "desativar" : "reativar"}</Botao></form>}
                 </li>
               ))}
             </ul>
@@ -38,7 +39,7 @@ export default async function Cadastros({ params }: { params: Promise<{ clienteI
             <input name="nome" placeholder="Nova categoria" required className={`${campo} flex-1`} />
             <select name="tipo" className={campo}><option value="pagar">Despesa</option><option value="receber">Receita</option></select>
             <select name="grupo" className={campo}>{GRUPOS_DRE.map((g) => <option key={g} value={g}>{GRUPO_ROTULO[g].split(" (")[0]}</option>)}</select>
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</Botao>
           </form>
         )}
       </section>
@@ -53,7 +54,7 @@ export default async function Cadastros({ params }: { params: Promise<{ clienteI
           <form action={criarConta.bind(null, clienteId)} className="flex flex-wrap gap-2">
             <input name="nome" placeholder="Ex.: Banco X – conta corrente" required className={`${campo} flex-1`} />
             <input name="saldo" placeholder="Saldo inicial (R$)" className={campo} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</Botao>
           </form>
         )}
       </section>
@@ -66,7 +67,7 @@ export default async function Cadastros({ params }: { params: Promise<{ clienteI
           {recs.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
               <span className={r.ativo ? "" : "text-slate-400 line-through"}>{r.tipo === "pagar" ? "Pagar" : "Receber"} · {r.descricao} · {fmtReais(r.valorCentavos)} · dia {r.diaVencimento}{r.categoriaId && ` · ${nomeCat.get(r.categoriaId) ?? ""}`}</span>
-              {a.edita && r.ativo && <form action={encerrarRecorrencia.bind(null, clienteId, r.id)}><button className="text-xs text-red-600 underline">Encerrar</button></form>}
+              {a.edita && r.ativo && <form action={encerrarRecorrencia.bind(null, clienteId, r.id)}><Botao className="text-xs text-red-600 underline">Encerrar</Botao></form>}
             </li>
           ))}
         </ul>

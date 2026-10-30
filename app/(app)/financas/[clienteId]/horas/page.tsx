@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -35,7 +36,7 @@ export default async function Horas({ params, searchParams }: { params: Promise<
           <input name="data" type="date" required defaultValue={mes === mesAtual() ? hojeISO() : `${mes}-01`} className={campo} />
           <select name="tipo" className={campo}>{Object.entries(TIPOS_HORA).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
           <input name="horas" placeholder="Horas (8:30 ou 8,5)" required className={campo} />
-          <button className="rounded bg-brand px-3 py-1 text-sm text-white">Lançar</button>
+          <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Lançar</Botao>
           <input name="observacao" placeholder="Observação (opcional)" className={`${campo} md:col-span-6`} />
         </form>
       )}
@@ -59,7 +60,7 @@ export default async function Horas({ params, searchParams }: { params: Promise<
           {horas.map(({ h, nome }) => (
             <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 p-2 px-3">
               <span>{fmtData(h.data)} · {nome} · {TIPOS_HORA[h.tipo]} · <b>{fmtHoras(h.minutos)}</b>{h.observacao && ` · ${h.observacao}`}</span>
-              {a.edita && <form action={excluirHoras.bind(null, clienteId, h.id)}><button className="text-xs text-red-600 underline">Excluir</button></form>}
+              {a.edita && <form action={excluirHoras.bind(null, clienteId, h.id)}><Botao className="text-xs text-red-600 underline">Excluir</Botao></form>}
             </li>
           ))}
         </ul>

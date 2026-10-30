@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import { count, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -46,13 +47,13 @@ export default async function Plataforma() {
                   <td className="p-3">
                     <form action={definirDominio.bind(null, e.id)} className="flex gap-1">
                       <input name="dominio" defaultValue={e.dominio ?? ""} placeholder="sem domínio próprio" className="min-w-0 rounded border px-2 py-1 text-xs" />
-                      <button className="rounded border px-2 text-xs">salvar</button>
+                      <Botao className="rounded border px-2 text-xs">salvar</Botao>
                     </form>
                   </td>
                   <td className="p-3">
                     {e.ativo ? "Ativo" : <span className="text-red-600">Suspenso</span>}
                     {e.id !== u.escritorio.id && (
-                      <form action={alternarEscritorio.bind(null, e.id)}><button className="block text-xs underline">{e.ativo ? "suspender" : "reativar"}</button></form>
+                      <form action={alternarEscritorio.bind(null, e.id)}><Botao className="block text-xs underline">{e.ativo ? "suspender" : "reativar"}</Botao></form>
                     )}
                   </td>
                 </tr>

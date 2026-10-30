@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { funcionarios } from "@/db/schema";
@@ -29,7 +30,7 @@ export default async function Funcionarios({ params }: { params: Promise<{ clien
             <input name="admissao" type="date" className={campo} title="Admissão" />
             <input name="salario" placeholder="Salário base (R$)" className={campo} />
             <input name="jornada" type="number" placeholder="Jornada semanal (h)" className={campo} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar</Botao>
           </form>
         </details>
       )}
@@ -42,7 +43,7 @@ export default async function Funcionarios({ params }: { params: Promise<{ clien
               <tr key={f.id} className="border-b last:border-0">
                 <td className="p-3 font-medium">{f.nome}</td><td className="p-3">{f.cargo ?? "—"}</td><td className="p-3">{VINCULO[f.vinculo]}</td>
                 <td className="p-3">{f.admissao ? fmtData(f.admissao) : "—"}</td><td className="p-3 text-right">{fmtReais(f.salarioBaseCentavos)}</td>
-                <td className="p-3">{f.ativo ? "Ativo" : `Desligado${f.desligamento ? ` em ${fmtData(f.desligamento)}` : ""}`}{a.edita && <form action={alternarFuncionario.bind(null, clienteId, f.id)} className="inline"><button className="ml-2 text-xs underline">{f.ativo ? "desligar" : "reativar"}</button></form>}</td>
+                <td className="p-3">{f.ativo ? "Ativo" : `Desligado${f.desligamento ? ` em ${fmtData(f.desligamento)}` : ""}`}{a.edita && <form action={alternarFuncionario.bind(null, clienteId, f.id)} className="inline"><Botao className="ml-2 text-xs underline">{f.ativo ? "desligar" : "reativar"}</Botao></form>}</td>
               </tr>
             ))}
           </tbody>

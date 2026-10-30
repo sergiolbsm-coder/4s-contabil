@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -68,7 +69,7 @@ export default async function Entregas({
             {Object.entries(TIPOS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
-        <button className="rounded border px-3 py-1">Filtrar</button>
+        <Botao className="rounded border px-3 py-1">Filtrar</Botao>
         <Link href="/entregas" className="py-1 underline">Limpar</Link>
       </form>
 

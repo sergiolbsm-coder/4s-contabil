@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import { useActionState } from "react";
 import { trocarSenha } from "@/lib/auth-actions";
 
@@ -16,7 +17,7 @@ export default function TrocarSenha() {
         <input name="nova" type="password" placeholder="Nova senha (mín. 8 caracteres)" required minLength={8} autoComplete="new-password" className={campo} />
         <input name="confirma" type="password" placeholder="Repita a nova senha" required autoComplete="new-password" className={campo} />
         {state?.erro && <p className="text-sm text-red-600">{state.erro}</p>}
-        <button disabled={pending} className="w-full rounded bg-brand py-2 text-white disabled:opacity-60">{pending ? "Salvando…" : "Salvar senha"}</button>
+        <Botao disabled={pending} className="w-full rounded bg-brand py-2 text-white disabled:opacity-60">{pending ? "Salvando…" : "Salvar senha"}</Botao>
       </form>
     </main>
   );

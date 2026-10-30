@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import { eq } from "drizzle-orm";
 import { clienteDoEscritorio } from "@/lib/guards";
 import { notFound, redirect } from "next/navigation";
@@ -45,7 +46,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
       {onb ? (
         <Link href={`/onboarding/${id}`} className="inline-block text-sm underline">Ver onboarding →</Link>
       ) : (
-        edita && <form action={iniciarOnboarding.bind(null, id)}><button className="rounded border px-3 py-1 text-sm">Iniciar onboarding</button></form>
+        edita && <form action={iniciarOnboarding.bind(null, id)}><Botao className="rounded border px-3 py-1 text-sm">Iniciar onboarding</Botao></form>
       )}
 
       {edita ? (
@@ -61,7 +62,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
           {cts.map((t) => (
             <li key={t.id} className="flex items-center justify-between p-3">
               <span>{t.nome}{t.cargo && ` · ${t.cargo}`}{t.email && ` · ${t.email}`}{t.telefone && ` · ${t.telefone}`}</span>
-              {edita && <form action={removerContato.bind(null, id, t.id)}><button className="text-red-600 underline">remover</button></form>}
+              {edita && <form action={removerContato.bind(null, id, t.id)}><Botao className="text-red-600 underline">remover</Botao></form>}
             </li>
           ))}
         </ul>
@@ -71,7 +72,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
             <input name="cargo" placeholder="Cargo" className={campo} />
             <input name="email" type="email" placeholder="E-mail" className={campo} />
             <input name="telefone" placeholder="Telefone" className={campo} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</Botao>
           </form>
         )}
       </section>
@@ -89,7 +90,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
                     <option value="rascunho">rascunho</option><option value="enviado">enviado</option>
                     <option value="assinado">assinado</option><option value="encerrado">encerrado</option>
                   </select>
-                  <button className="rounded border px-2 text-xs">Salvar</button>
+                  <Botao className="rounded border px-2 text-xs">Salvar</Botao>
                 </form>
               ) : <span>{t.status}</span>}
             </li>
@@ -100,7 +101,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
             <input name="descricao" placeholder="Descrição" required className={campo} />
             <input name="valor" placeholder="Valor mensal (R$)" className={campo} />
             <input name="inicio" type="date" className={campo} />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</Botao>
           </form>
         )}
       </section>

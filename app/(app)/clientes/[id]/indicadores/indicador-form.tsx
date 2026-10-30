@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import { useActionState } from "react";
 import { salvarIndicador } from "@/lib/indicadores-actions";
 import type { Fechamento } from "@/lib/indicadores";
@@ -46,7 +47,7 @@ export function IndicadorForm({ clienteId, competencia, f, publicado }: { client
 
       {state?.erro && <p className="text-sm text-red-600">{state.erro}</p>}
       {state?.ok && <p className="text-sm text-emerald-700">{state.ok}</p>}
-      <button disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60">{pending ? "Salvando…" : "Salvar mês"}</button>
+      <Botao disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60">{pending ? "Salvando…" : "Salvar mês"}</Botao>
     </form>
   );
 }

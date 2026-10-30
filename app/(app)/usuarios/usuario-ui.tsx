@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import { useActionState, useState } from "react";
 import { criarUsuario, redefinirSenha, type EstadoUsuario } from "@/lib/usuarios-actions";
 
@@ -44,7 +45,7 @@ export function NovoUsuarioForm({ clientes, clienteInicial }: { clientes: { id: 
           </label>
         )}
         {state?.erro && <p className="text-sm text-red-600 sm:col-span-2">{state.erro}</p>}
-        <button disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Criando…" : "Criar acesso"}</button>
+        <Botao disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Criando…" : "Criar acesso"}</Botao>
       </form>
       {state?.ok && <Credencial ok={state.ok} />}
     </div>
@@ -56,9 +57,9 @@ export function RedefinirSenha({ id }: { id: string }) {
   return (
     <div>
       <form action={action}>
-        <button disabled={pending} onClick={(e) => { if (!confirm("Gerar nova senha provisória e derrubar as sessões deste usuário?")) e.preventDefault(); }} className="underline">
+        <Botao disabled={pending} onClick={(e) => { if (!confirm("Gerar nova senha provisória e derrubar as sessões deste usuário?")) e.preventDefault(); }} className="underline">
           {pending ? "…" : "nova senha"}
-        </button>
+        </Botao>
       </form>
       {state?.erro && <p className="text-xs text-red-600">{state.erro}</p>}
       {state?.ok && <div className="mt-2"><Credencial ok={state.ok} /></div>}

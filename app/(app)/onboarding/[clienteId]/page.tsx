@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/session";
@@ -60,12 +61,12 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                       <span className={it.feito ? "text-slate-400 line-through" : ""}>{it.texto}</span>
                       {it.docId && edita && (
                         <form action={alternarDocumento.bind(null, clienteId, it.docId)} className="ml-auto">
-                          <button className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</button>
+                          <Botao className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</Botao>
                         </form>
                       )}
                       {it.alternar && edita && (
                         <form action={alternarMovimentacao.bind(null, clienteId)} className="ml-auto">
-                          <button className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</button>
+                          <Botao className="text-xs underline">{it.feito ? "desfazer" : `${it.acao} →`}</Botao>
                         </form>
                       )}
                       {!it.feito && it.href && (it.href.startsWith("#")
@@ -77,7 +78,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                 {e.chave === "documentos" && edita && (
                   <form action={adicionarDocumento.bind(null, clienteId)} className="ml-6 mt-2 flex gap-2">
                     <input name="nome" placeholder="Outro documento" required className={`${campo} flex-1`} />
-                    <button className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</button>
+                    <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Adicionar</Botao>
                   </form>
                 )}
                 {e.chave === "diagnostico" && (
@@ -89,7 +90,7 @@ export default async function OnboardingCliente({ params }: { params: Promise<{ 
                           <textarea name={p.chave} rows={2} defaultValue={respostas[p.chave] ?? ""} disabled={!edita} className="mt-1 w-full rounded border px-2 py-1" />
                         </label>
                       ))}
-                      {edita && <button className="rounded bg-brand px-3 py-1 text-white">Salvar diagnóstico</button>}
+                      {edita && <Botao className="rounded bg-brand px-3 py-1 text-white">Salvar diagnóstico</Botao>}
                     </form>
                   </details>
                 )}

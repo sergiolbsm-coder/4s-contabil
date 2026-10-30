@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { exigirUsuario } from "@/lib/session";
@@ -65,7 +66,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="text-xs text-white/70">{ROTULOS_PAPEL[u.papel]}{u.superadmin && " · plataforma"}</div>
           <div className="flex gap-3 pt-1 text-xs">
             <Link href="/trocar-senha" className="underline">Trocar senha</Link>
-            <form action={sair}><button className="underline">Sair</button></form>
+            <form action={sair}><Botao className="underline">Sair</Botao></form>
           </div>
           <div className="pt-2 font-mono text-[10px] uppercase tracking-widest text-white/50">{PRODUTO} · Instituto da Liderança</div>
         </div>

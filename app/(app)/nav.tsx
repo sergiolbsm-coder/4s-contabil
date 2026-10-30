@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -26,7 +27,7 @@ export function Nav({ itens }: { itens: ItemMenu[] }) {
             <div className={`flex items-center rounded-lg ${ativo ? "border-l-2 border-[#FF0060] bg-[rgba(255,0,96,0.14)] text-white" : "border-l-2 border-transparent text-white/75 hover:bg-white/10"}`}>
               <Link href={i.href} className={`flex-1 whitespace-nowrap px-3 py-2 text-sm ${ativo ? "font-medium" : ""}`}>{i.rotulo}</Link>
               {temFilhos && (
-                <button
+                <Botao
                   type="button"
                   aria-expanded={aberta}
                   aria-label={`${aberta ? "Recolher" : "Abrir"} ${i.rotulo}`}
@@ -34,7 +35,7 @@ export function Nav({ itens }: { itens: ItemMenu[] }) {
                   className="px-2 py-2 text-xs"
                 >
                   <span className={`inline-block transition-transform ${aberta ? "rotate-90" : ""}`}>▸</span>
-                </button>
+                </Botao>
               )}
             </div>
             {aberta && (

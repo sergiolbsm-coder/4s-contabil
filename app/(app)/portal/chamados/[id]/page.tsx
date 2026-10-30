@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
@@ -90,7 +91,7 @@ export default async function ChamadoDoCliente({ params }: { params: Promise<{ i
         {aberto ? (
           <form action={comentarPortal.bind(null, id)} className="flex gap-2">
             <textarea name="texto" rows={2} required maxLength={4000} placeholder="Responder ou acrescentar informação" className="flex-1 rounded border px-3 py-2 text-sm" />
-            <button className="self-start rounded bg-brand px-3 py-2 text-sm text-white">Enviar</button>
+            <Botao className="self-start rounded bg-brand px-3 py-2 text-sm text-white">Enviar</Botao>
           </form>
         ) : (
           <p className="text-sm text-slate-500">Chamado concluído. Se precisar de algo mais, abra um novo chamado.</p>

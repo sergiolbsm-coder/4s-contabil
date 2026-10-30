@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, desc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
@@ -55,7 +56,7 @@ export default async function IndicadoresDoCliente({ params, searchParams }: { p
                 <td className="p-3">{x.publicadoEm ? <span className="text-emerald-700">Publicado</span> : <span className="text-slate-500">Rascunho</span>}</td>
                 <td className="space-x-2 p-3 text-right">
                   <Link href={`/clientes/${id}/indicadores?mes=${x.competencia}`} className="underline">editar</Link>
-                  {edita && <form action={excluirIndicador.bind(null, id, x.competencia)} className="inline"><button className="text-red-600 underline">excluir</button></form>}
+                  {edita && <form action={excluirIndicador.bind(null, id, x.competencia)} className="inline"><Botao className="text-red-600 underline">excluir</Botao></form>}
                 </td>
               </tr>
             ))}

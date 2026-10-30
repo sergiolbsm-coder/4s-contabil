@@ -1,3 +1,4 @@
+import { Botao } from "@/components/botao";
 import Link from "next/link";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -63,7 +64,7 @@ export default async function Fechamento({ params, searchParams }: { params: Pro
         {a.edita && (
           <form action={marcarEnviado.bind(null, clienteId, comp)} className="flex flex-wrap gap-2">
             <input name="observacao" placeholder="Recado para a contabilidade (opcional)" className="min-w-0 flex-1 rounded border px-2 py-1 text-sm" />
-            <button className="rounded bg-brand px-3 py-1 text-sm text-white">{env ? "Reenviar" : "Marcar como pronto para fechamento"}</button>
+            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">{env ? "Reenviar" : "Marcar como pronto para fechamento"}</Botao>
           </form>
         )}
       </section>

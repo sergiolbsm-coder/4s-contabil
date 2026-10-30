@@ -1,5 +1,6 @@
 "use client";
 
+import { Botao } from "@/components/botao";
 import { useActionState, useState } from "react";
 import { criarEscritorio } from "@/lib/plataforma-actions";
 
@@ -25,7 +26,7 @@ export function NovoEscritorioForm() {
         <label>Administrador — nome <input name="adminNome" required className={campo} /></label>
         <label>Administrador — e-mail (login) <input name="adminEmail" type="email" required className={campo} /></label>
         {state?.erro && <p className="text-sm text-red-600 sm:col-span-2">{state.erro}</p>}
-        <button disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Criando…" : "Criar escritório"}</button>
+        <Botao disabled={pending} className="rounded bg-brand px-4 py-2 text-white disabled:opacity-60 sm:col-span-2 sm:w-fit">{pending ? "Criando…" : "Criar escritório"}</Botao>
       </form>
       {state?.ok && (
         <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm">
