@@ -41,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ? [
             ...(u.clienteId ? [{ href: `/financas/${u.clienteId}`, rotulo: "Finanças", filhos: [
               { href: `/financas/${u.clienteId}`, rotulo: "Painel" }, { href: `/financas/${u.clienteId}/pagar`, rotulo: "Contas a pagar" }, { href: `/financas/${u.clienteId}/receber`, rotulo: "Contas a receber" },
-              { href: `/financas/${u.clienteId}/fluxo`, rotulo: "Fluxo de caixa" }, { href: `/financas/${u.clienteId}/dre`, rotulo: "DRE" }, { href: `/financas/${u.clienteId}/avisos`, rotulo: "Avisos" },
+              { href: `/financas/${u.clienteId}/fluxo`, rotulo: "Fluxo de caixa" }, { href: `/financas/${u.clienteId}/dre`, rotulo: "DRE" }, { href: `/financas/${u.clienteId}/growth`, rotulo: "Growth" }, { href: `/financas/${u.clienteId}/avisos`, rotulo: "Avisos" },
               { href: `/financas/${u.clienteId}/funcionarios`, rotulo: "Funcionários" }, { href: `/financas/${u.clienteId}/fechamento`, rotulo: "Fechamento" },
             ] }] : []),
             { href: "/portal/indicadores", rotulo: "Indicadores" },

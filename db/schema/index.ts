@@ -446,3 +446,34 @@ export const finEnvios = pgTable(
   },
   (t) => [uniqueIndex("fin_envios_uq").on(t.clienteId, t.competencia)],
 );
+
+// ───────────── Growth: premissas e acompanhamento de marketing/vendas ─────────────
+
+export const growthPremissas = pgTable("growth_premissas", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+  clienteId: uuid("cliente_id").notNull().unique().references(() => clientes.id, { onDelete: "cascade" }),
+  ticketMedioCentavos: integer("ticket_medio_centavos"),
+  cacCentavos: integer("cac_centavos"), // vazio = usa o CAC alvo (40% da margem)
+  usaMidia: boolean("usa_midia").notNull().default(false),
+  custosVariaveisBps: integer("custos_variaveis_bps"), // vazio = calcula do DRE real
+  custosFixosCentavos: integer("custos_fixos_centavos"), // vazio = média das despesas reais
+  metaFaturamentoCentavos: integer("meta_faturamento_centavos"),
+  crescimentoMensalBps: integer("crescimento_mensal_bps").notNull().default(0),
+  atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+});
+
+export const growthMensal = pgTable(
+  "growth_mensal",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    metaCentavos: integer("meta_centavos"),
+    midiaCentavos: integer("midia_centavos"),
+    leads: integer("leads"),
+    vendas: integer("vendas"),
+  },
+  (t) => [uniqueIndex("growth_mensal_uq").on(t.clienteId, t.competencia)],
+);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ABAS = [
-  ["", "Painel"], ["/pagar", "Contas a pagar"], ["/receber", "Contas a receber"], ["/fluxo", "Fluxo de caixa"], ["/dre", "DRE"],
+  ["", "Painel"], ["/pagar", "Contas a pagar"], ["/receber", "Contas a receber"], ["/fluxo", "Fluxo de caixa"], ["/dre", "DRE"], ["/growth", "Growth"],
   ["/avisos", "Avisos"], ["/cadastros", "Cadastros"], ["/funcionarios", "Funcionários"], ["/horas", "Horas"], ["/beneficios", "Benefícios"], ["/fechamento", "Fechamento"],
 ] as const;
 
