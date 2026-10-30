@@ -77,6 +77,7 @@ export async function gerarRecorrencias(escritorioId: string, clienteId: string)
     const fim = r.fim && r.fim < limite ? r.fim : limite;
     let c = r.inicio;
     for (let i = 0; c <= fim && i < 60; i++, c = somarMeses(c, 1)) {
+      if (r.puladas.includes(c)) continue;
       novos.push({
         escritorioId, clienteId, tipo: r.tipo, descricao: r.descricao, parceiro: r.parceiro, categoriaId: r.categoriaId,
         recorrenciaId: r.id, valorCentavos: r.valorCentavos, vencimento: diaDoMes(c, r.diaVencimento), competencia: c,

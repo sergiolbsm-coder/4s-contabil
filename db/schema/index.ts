@@ -330,6 +330,8 @@ export const finRecorrencias = pgTable(
     diaVencimento: integer("dia_vencimento").notNull(),
     inicio: varchar("inicio", { length: 7 }).notNull(), // AAAA-MM
     fim: varchar("fim", { length: 7 }),
+    // competências excluídas à mão: não são geradas de novo
+    puladas: jsonb("puladas").$type<string[]>().notNull().default([]),
     ativo: boolean("ativo").notNull().default(true),
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
   },

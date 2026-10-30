@@ -1,0 +1,1 @@
+ALTER TABLE "fin_recorrencias" ADD COLUMN "puladas" jsonb DEFAULT '[]'::jsonb NOT NULL;

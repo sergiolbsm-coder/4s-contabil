@@ -87,6 +87,13 @@ export async function estornarLancamento(clienteId: string, id: string) {
 export async function excluirLancamento(clienteId: string, id: string) {
   const a = await acessoEdicao(clienteId);
   if (!idValido(id)) return;
+  const [l] = await db.select({ recorrenciaId: finLancamentos.recorrenciaId, competencia: finLancamentos.competencia }).from(finLancamentos).where(and(eq(finLancamentos.id, id), eq(finLancamentos.clienteId, clienteId)));
+  if (!l) return;
+  // instância de recorrência: guarda a competência para não ser gerada de novo ao reabrir a página
+  if (l.recorrenciaId) {
+    const [r] = await db.select({ puladas: finRecorrencias.puladas }).from(finRecorrencias).where(and(eq(finRecorrencias.id, l.recorrenciaId), eq(finRecorrencias.clienteId, clienteId)));
+    if (r && !r.puladas.includes(l.competencia)) await db.update(finRecorrencias).set({ puladas: [...r.puladas, l.competencia] }).where(eq(finRecorrencias.id, l.recorrenciaId));
+  }
   await db.delete(finLancamentos).where(and(eq(finLancamentos.id, id), eq(finLancamentos.clienteId, clienteId)));
   await db.insert(auditoria).values({ usuarioId: a.u.id, escritorioId: a.escritorioId, acao: "excluir", entidade: "fin_lancamento", entidadeId: id });
   atualizar(clienteId);
