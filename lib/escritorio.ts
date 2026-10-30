@@ -16,9 +16,10 @@ export type Escritorio = {
 
 export const PRODUTO = "ContaHub";
 
-export const COR_PADRAO = "#0f172a";
+export const COR_PADRAO = "#391694"; // roxo institucional do IDL
+const COR_ANTIGA = "#0f172a"; // padrão antigo (cinza-azulado), tratado como "sem cor própria"
 export const corValida = (c: string) => /^#[0-9a-fA-F]{6}$/.test(c);
-export const corSegura = (c: string | null | undefined) => (c && corValida(c) ? c : COR_PADRAO);
+export const corSegura = (c: string | null | undefined) => (c && corValida(c) && c.toLowerCase() !== COR_ANTIGA ? c : COR_PADRAO);
 
 // Padrões usados quando o escritório não personalizou
 export const SLA_PADRAO = { societario: 72, fiscal: 48, trabalhista: 48, financeiro: 24, outros: 72 } as const;

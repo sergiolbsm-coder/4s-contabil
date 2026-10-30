@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-cormorant", display: "swap" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-jetbrains", display: "swap" });
 
 export const metadata: Metadata = {
   title: "ContaHub",
@@ -18,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className={`${dmSans.variable} ${cormorant.variable} ${jetbrains.variable} min-h-screen font-sans antialiased`}>{children}</body>
     </html>
   );
 }

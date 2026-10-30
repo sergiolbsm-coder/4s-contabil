@@ -55,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen md:flex" style={{ "--brand": corSegura(esc.corPrimaria) } as React.CSSProperties}>
-      <aside className="flex flex-col gap-4 bg-brand p-4 text-slate-100 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0">
+      <aside className="flex flex-col gap-4 p-4 text-slate-100 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0" style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--brand) 60%, #000) 0%, var(--brand) 100%)" }}>
         <Link href="/" className="px-3 text-lg font-semibold">
           {esc.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={esc.logoUrl} alt={esc.nome} className="max-h-10 max-w-full" /> : esc.nome}
         </Link>
@@ -67,7 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/trocar-senha" className="underline">Trocar senha</Link>
             <form action={sair}><button className="underline">Sair</button></form>
           </div>
-          <div className="pt-2 text-[10px] uppercase tracking-wide text-white/50">{PRODUTO}</div>
+          <div className="pt-2 font-mono text-[10px] uppercase tracking-widest text-white/50">{PRODUTO} · Instituto da Liderança</div>
         </div>
       </aside>
       <main className="min-w-0 flex-1 p-4 md:p-8"><div className="mx-auto max-w-5xl">{children}</div></main>

@@ -23,7 +23,7 @@ export function Nav({ itens }: { itens: ItemMenu[] }) {
         const aberta = temFilhos && aberto(i);
         return (
           <div key={i.href} className="shrink-0">
-            <div className={`flex items-center rounded-lg ${ativo ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10"}`}>
+            <div className={`flex items-center rounded-lg ${ativo ? "border-l-2 border-[#FF0060] bg-[rgba(255,0,96,0.14)] text-white" : "border-l-2 border-transparent text-white/75 hover:bg-white/10"}`}>
               <Link href={i.href} className={`flex-1 whitespace-nowrap px-3 py-2 text-sm ${ativo ? "font-medium" : ""}`}>{i.rotulo}</Link>
               {temFilhos && (
                 <button
@@ -45,7 +45,7 @@ export function Nav({ itens }: { itens: ItemMenu[] }) {
                   const ativoFilho = simples && path === f.href;
                   return (
                     <li key={f.href}>
-                      <Link href={f.href} className={`block whitespace-nowrap rounded px-2 py-1 text-[13px] ${ativoFilho ? "bg-white/15 font-medium text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`}>
+                      <Link href={f.href} className={`block whitespace-nowrap rounded px-2 py-1 text-[13px] ${ativoFilho ? "bg-[rgba(255,0,96,0.14)] font-medium text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`}>
                         {f.rotulo}
                       </Link>
                     </li>
