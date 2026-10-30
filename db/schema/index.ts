@@ -461,6 +461,7 @@ export const growthPremissas = pgTable("growth_premissas", {
   metaFaturamentoCentavos: integer("meta_faturamento_centavos"),
   faturamentoAtualCentavos: integer("faturamento_atual_centavos"), // vazio = média dos 3 últimos meses do DRE
   crescimentoMensalBps: integer("crescimento_mensal_bps").notNull().default(0),
+  impostosMidiaBps: jsonb("impostos_midia_bps").$type<Record<string, number>>().notNull().default({}), // % de impostos somado ao custo de mídia, por canal (1000 = 10%)
   atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
 });
 
@@ -475,6 +476,8 @@ export const growthMensal = pgTable(
     midiaCentavos: integer("midia_centavos"),
     leads: integer("leads"),
     vendas: integer("vendas"),
+    receitaVendasCentavos: integer("receita_vendas_centavos"), // valor vendido no mês vindo do marketing (base do ROAS real)
+    custoComercialCentavos: integer("custo_comercial_centavos"), // comissões/equipe comercial/outros custos de aquisição (entra no CAC real)
   },
   (t) => [uniqueIndex("growth_mensal_uq").on(t.clienteId, t.competencia)],
 );
@@ -505,4 +508,23 @@ export const growthCanais = pgTable(
     atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
   },
   (t) => [uniqueIndex("growth_canais_uq").on(t.clienteId, t.competencia, t.canal)],
+);
+
+// Números mensais por campanha dentro de cada canal, vindos do IL Campanhas
+export const growthCampanhas = pgTable(
+  "growth_campanhas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    canal: varchar("canal", { length: 40 }).notNull(),
+    campanha: varchar("campanha", { length: 200 }).notNull(),
+    custoCentavos: integer("custo_centavos").notNull().default(0),
+    impressoes: integer("impressoes"),
+    cliques: integer("cliques"),
+    conversoes: integer("conversoes"),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("growth_campanhas_uq").on(t.clienteId, t.competencia, t.canal, t.campanha)],
 );

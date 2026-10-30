@@ -85,6 +85,13 @@
       "when": 1793377056794,
       "tag": "0011_flowery_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793379671662,
+      "tag": "0012_loose_vector",
+      "breakpoints": true
     }
   ]
 }

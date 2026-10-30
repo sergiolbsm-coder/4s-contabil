@@ -16,7 +16,15 @@ const inteiro = (f: FormData, k: string) => {
 
 export async function salvarPremissas(clienteId: string, form: FormData) {
   const a = await acessoEdicao(clienteId);
+  // Impostos sobre mídia por canal (campos "imp:<canal>"); vazio = sem imposto
+  const impostosMidiaBps: Record<string, number> = {};
+  for (const [k, v] of form.entries()) {
+    if (!k.startsWith("imp:")) continue;
+    const bps = parsePctBps(String(v));
+    if (bps != null && bps > 0) impostosMidiaBps[k.slice(4).slice(0, 40)] = bps;
+  }
   const valores = {
+    impostosMidiaBps,
     ticketMedioCentavos: vazio(form, "ticket") ? null : parseReais(String(form.get("ticket"))),
     cacCentavos: vazio(form, "cac") ? null : parseReais(String(form.get("cac"))),
     usaMidia: form.get("usaMidia") === "on",
@@ -40,6 +48,8 @@ export async function salvarMesGrowth(clienteId: string, form: FormData) {
     metaCentavos: vazio(form, "meta") ? null : parseReais(String(form.get("meta"))),
     midiaCentavos: vazio(form, "midia") ? null : parseReais(String(form.get("midia"))),
     leads: inteiro(form, "leads"), vendas: inteiro(form, "vendas"),
+    receitaVendasCentavos: vazio(form, "receitaVendas") ? null : parseReais(String(form.get("receitaVendas"))),
+    custoComercialCentavos: vazio(form, "custoComercial") ? null : parseReais(String(form.get("custoComercial"))),
   };
   await db.insert(growthMensal).values({ escritorioId: a.escritorioId, clienteId, competencia, ...valores })
     .onConflictDoUpdate({ target: [growthMensal.clienteId, growthMensal.competencia], set: valores });

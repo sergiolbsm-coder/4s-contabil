@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
-import { acessoFinancas, diasNoMes, hojeISO, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
+import { growthCampanhas, growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
+import { acessoFinancas, competenciaValida, diasNoMes, hojeISO, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
 import { carregarBase, dreMes } from "@/lib/financas-dados";
 import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, planoDaMeta, projecao, type Premissas } from "@/lib/growth";
 import { salvarMesGrowth, salvarPremissas } from "@/lib/growth-actions";
@@ -16,8 +16,9 @@ const Rotulo = ({ t, dica, children }: { t: string; dica?: string; children: Rea
 );
 const pct = (v: number) => `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 
-export default async function Growth({ params }: { params: Promise<{ clienteId: string }> }) {
+export default async function Growth({ params, searchParams }: { params: Promise<{ clienteId: string }>; searchParams: Promise<{ mes?: string }> }) {
   const { clienteId } = await params;
+  const sp = await searchParams;
   const a = await acessoFinancas(clienteId);
   const base = await carregarBase(clienteId);
   const [pr] = await db.select().from(growthPremissas).where(eq(growthPremissas.clienteId, clienteId));
@@ -25,7 +26,17 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
   const mes = mesAtual();
   const [conexao] = await db.select().from(growthConexoes).where(eq(growthConexoes.clienteId, clienteId));
   const canais = await db.select().from(growthCanais).where(eq(growthCanais.clienteId, clienteId));
-  const canaisRecentes = canais.filter((c) => c.competencia >= somarMeses(mes, -5)).sort((x, y) => y.competencia.localeCompare(x.competencia) || x.canal.localeCompare(y.canal));
+  const campanhas = await db.select().from(growthCampanhas).where(eq(growthCampanhas.clienteId, clienteId));
+  const mesSel = sp.mes && competenciaValida(sp.mes) ? sp.mes : mes; // mês em edição e das campanhas listadas
+  const campanhasMes = campanhas.filter((c) => c.competencia === mesSel).sort((x, y) => x.canal.localeCompare(y.canal) || y.custoCentavos - x.custoCentavos);
+  // Impostos sobre mídia por canal (1000 = 10%): somados ao custo que vem das APIs, que não inclui impostos
+  const impostos = pr?.impostosMidiaBps ?? {};
+  const comImposto = (canal: string, custo: number) => Math.round(custo * (1 + (impostos[canal] ?? 0) / 10000));
+  const nomesCanais = [...new Set(["Google Ads", "Meta Ads", ...canais.map((c) => c.canal)])];
+  const midiaDoMes = (c: string, manual: number | null) => {
+    const doMes = canais.filter((x) => x.competencia === c);
+    return doMes.length ? doMes.reduce((t, x) => t + comImposto(x.canal, x.custoCentavos), 0) : manual;
+  };
 
   // Dados reais dos 3 últimos meses fechados (DRE por competência)
   const ult3 = [1, 2, 3].map((i) => dreMes(base.lancs, base.cats, somarMeses(mes, -i)));
@@ -62,9 +73,9 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
   const historico = [5, 4, 3, 2, 1, 0].map((i) => somarMeses(mes, -i)).map((c) => {
     const m = mensal.find((x) => x.competencia === c);
     const real = dreMes(base.lancs, base.cats, c).grupos.receita;
-    return { c, meta: metaDoMes(c), real, midia: m?.midiaCentavos ?? null, leads: m?.leads ?? null, vendas: m?.vendas ?? null };
+    return { c, meta: metaDoMes(c), real, midia: midiaDoMes(c, m?.midiaCentavos ?? null), leads: m?.leads ?? null, vendas: m?.vendas ?? null, receitaVendas: m?.receitaVendasCentavos ?? null, comercial: m?.custoComercialCentavos ?? null };
   });
-  const mAtual = mensal.find((x) => x.competencia === mes);
+  const mAtual = mensal.find((x) => x.competencia === mesSel);
 
   return (
     <div className="space-y-6">
@@ -89,6 +100,15 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="usaMidia" defaultChecked={pr?.usaMidia ?? false} disabled={!a.edita} className="h-4 w-4" /> A empresa investe em mídia paga</label>
             <Rotulo t="CAC (R$)" dica="Custo para conquistar um cliente. Vazio = sugerimos o CAC alvo."><input name="cac" defaultValue={reaisParaCampo(pr?.cacCentavos)} className={campo} disabled={!a.edita} /></Rotulo>
           </div>
+          <fieldset className="md:col-span-3 rounded-lg border p-3">
+            <legend className="px-1 text-sm font-medium">Impostos sobre mídia (% por canal)</legend>
+            <p className="mb-2 text-xs text-slate-500">O Google Ads e a Meta cobram impostos por cima do valor investido, e as APIs informam o custo sem eles. Informe a alíquota da fatura de cada canal para o CAC e o ROAS reais usarem o custo com impostos. Vazio = sem imposto.</p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {nomesCanais.map((n) => (
+                <Rotulo key={n} t={n}><input name={`imp:${n}`} defaultValue={fmtPct(impostos[n])} placeholder="ex.: 13,5" className={campo} disabled={!a.edita} /></Rotulo>
+              ))}
+            </div>
+          </fieldset>
           {a.edita && <div className="md:col-span-3"><Botao className="rounded bg-brand px-4 py-1.5 text-sm text-white">Salvar premissas</Botao></div>}
         </form>
       </section>
@@ -148,35 +168,46 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
         </section>
       )}
 
-      <section className="rounded-xl border bg-white p-4">
+      <section id="mes" className="rounded-xl border bg-white p-4">
         <h3 className="mb-2 font-semibold">4. Marketing e vendas do mês</h3>
         {a.edita && (
-          <form action={salvarMesGrowth.bind(null, clienteId)} className="mb-4 grid gap-2 md:grid-cols-6">
-            <input type="hidden" name="competencia" value={mes} />
-            <div className="self-center text-sm font-medium capitalize">{mesLongo(mes)}</div>
-            <input name="meta" placeholder="Meta do mês (R$)" defaultValue={reaisParaCampo(mAtual?.metaCentavos)} className={campo} />
-            <input name="midia" placeholder="Investido em mídia (R$)" defaultValue={reaisParaCampo(mAtual?.midiaCentavos)} className={campo} />
-            <input name="leads" placeholder="Leads" defaultValue={mAtual?.leads ?? ""} className={campo} />
-            <input name="vendas" placeholder="Vendas fechadas" defaultValue={mAtual?.vendas ?? ""} className={campo} />
-            <Botao className="rounded bg-brand px-3 py-1 text-sm text-white">Salvar mês</Botao>
+          <form key={mesSel} action={salvarMesGrowth.bind(null, clienteId)} className="mb-4 space-y-2">
+            <input type="hidden" name="competencia" value={mesSel} />
+            <div className="text-sm font-medium capitalize">Editando {mesLongo(mesSel)} <span className="font-normal text-slate-500">(escolha outro mês clicando em &quot;Editar&quot; na tabela)</span></div>
+            <div className="grid gap-2 md:grid-cols-3">
+              <Rotulo t="Meta do mês (R$)"><input name="meta" defaultValue={reaisParaCampo(mAtual?.metaCentavos)} className={campo} /></Rotulo>
+              <Rotulo t="Investido em mídia (R$)" dica="Sem o IL Campanhas, informe já com impostos. Com ele, é calculado pelos canais."><input name="midia" defaultValue={reaisParaCampo(mAtual?.midiaCentavos)} className={campo} /></Rotulo>
+              <Rotulo t="Leads"><input name="leads" defaultValue={mAtual?.leads ?? ""} className={campo} /></Rotulo>
+              <Rotulo t="Vendas fechadas (quantidade)"><input name="vendas" defaultValue={mAtual?.vendas ?? ""} className={campo} /></Rotulo>
+              <Rotulo t="Valor vendido via marketing (R$)" dica="Base do ROAS real. Vazio = usa a receita do DRE."><input name="receitaVendas" defaultValue={reaisParaCampo(mAtual?.receitaVendasCentavos)} className={campo} /></Rotulo>
+              <Rotulo t="Outros custos de aquisição (R$)" dica="Comissões, equipe comercial etc. Entram no CAC real."><input name="custoComercial" defaultValue={reaisParaCampo(mAtual?.custoComercialCentavos)} className={campo} /></Rotulo>
+            </div>
+            <Botao className="rounded bg-brand px-3 py-1.5 text-sm text-white">Salvar mês</Botao>
           </form>
         )}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b text-slate-500"><tr><th className="py-2">Mês</th><th className="text-right">Meta</th><th className="text-right">Realizado (DRE)</th><th className="text-right">Meta atingida</th><th className="text-right">Mídia</th><th className="text-right">Leads</th><th className="text-right">Vendas</th><th className="text-right">CAC real</th><th className="text-right">ROAS real</th></tr></thead>
+            <thead className="border-b text-slate-500"><tr><th className="py-2">Mês</th><th className="text-right">Meta</th><th className="text-right">Realizado (DRE)</th><th className="text-right">Meta atingida</th><th className="text-right">Mídia</th><th className="text-right">Leads</th><th className="text-right">Vendas</th><th className="text-right">Valor vendido</th><th className="text-right">CAC real</th><th className="text-right">ROAS real</th>{a.edita && <th />}</tr></thead>
             <tbody>
-              {historico.map((h) => (
-                <tr key={h.c} className="border-b last:border-0">
-                  <td className="py-2">{mesCurto(h.c)}</td><td className="text-right">{h.meta ? fmtReais(h.meta) : "—"}</td><td className="text-right">{fmtReais(h.real)}</td>
-                  <td className="text-right">{h.meta ? `${Math.round((h.real / h.meta) * 100)}%` : "—"}</td>
-                  <td className="text-right">{h.midia != null ? fmtReais(h.midia) : "—"}</td><td className="text-right">{h.leads ?? "—"}</td><td className="text-right">{h.vendas ?? "—"}</td>
-                  <td className="text-right">{h.midia && h.vendas ? fmtReais(Math.round(h.midia / h.vendas)) : "—"}</td>
-                  <td className="text-right">{h.midia && h.real ? `${(h.real / h.midia).toFixed(1)}x` : "—"}</td>
-                </tr>
-              ))}
+              {historico.map((h) => {
+                const custoAquisicao = h.midia != null || h.comercial != null ? (h.midia ?? 0) + (h.comercial ?? 0) : null;
+                const receitaRoas = h.receitaVendas ?? h.real;
+                return (
+                  <tr key={h.c} className={`border-b last:border-0 ${h.c === mesSel ? "bg-slate-50" : ""}`}>
+                    <td className="py-2">{mesCurto(h.c)}</td><td className="text-right">{h.meta ? fmtReais(h.meta) : "—"}</td><td className="text-right">{fmtReais(h.real)}</td>
+                    <td className="text-right">{h.meta ? `${Math.round((h.real / h.meta) * 100)}%` : "—"}</td>
+                    <td className="text-right">{h.midia != null ? fmtReais(h.midia) : "—"}</td><td className="text-right">{h.leads ?? "—"}</td><td className="text-right">{h.vendas ?? "—"}</td>
+                    <td className="text-right">{h.receitaVendas != null ? fmtReais(h.receitaVendas) : "—"}</td>
+                    <td className="text-right">{custoAquisicao && h.vendas ? fmtReais(Math.round(custoAquisicao / h.vendas)) : "—"}</td>
+                    <td className="text-right">{h.midia && receitaRoas ? `${(receitaRoas / h.midia).toFixed(1)}x` : "—"}</td>
+                    {a.edita && <td className="pl-2 text-right"><a href={`?mes=${h.c}#mes`} className="text-brand underline">Editar</a></td>}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <p className="mt-2 text-xs text-slate-500">CAC real = (mídia com impostos + outros custos de aquisição) ÷ vendas fechadas. ROAS real = valor vendido via marketing (ou receita do DRE, se vazio) ÷ mídia.</p>
       </section>
 
       <section className="rounded-xl border bg-white p-4">
@@ -186,16 +217,18 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
           {" "}Os valores recebidos preenchem a seção 4 (mídia e leads) e o CAC e o ROAS reais.
         </p>
         {a.edita && a.u.papel !== "cliente" && <GerarToken clienteId={clienteId} conectado={!!conexao} />}
-        {canaisRecentes.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
+        <h4 className="mt-5 text-sm font-semibold capitalize">Campanhas de {mesLongo(mesSel)}</h4>
+        {campanhasMes.length === 0 ? <p className="mt-1 text-sm text-slate-500">Sem campanhas recebidas neste mês. Envie pelo IL Campanhas.</p> : (
+          <div className="mt-2 overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b text-slate-500"><tr><th className="py-2">Mês</th><th>Canal</th><th className="text-right">Custo</th><th className="text-right">Cliques</th><th className="text-right">CPC</th><th className="text-right">Conversões</th><th className="text-right">Custo/conversão</th></tr></thead>
+              <thead className="border-b text-slate-500"><tr><th className="py-2">Canal</th><th>Campanha</th><th className="text-right">Custo</th><th className="text-right">Com impostos</th><th className="text-right">Cliques</th><th className="text-right">CPC</th><th className="text-right">Conversões</th><th className="text-right">Custo/conversão</th></tr></thead>
               <tbody>
-                {canaisRecentes.map((c) => (
+                {campanhasMes.map((c) => (
                   <tr key={c.id} className="border-b last:border-0">
-                    <td className="py-2">{mesCurto(c.competencia)}</td><td>{c.canal}</td><td className="text-right">{fmtReais(c.custoCentavos)}</td>
+                    <td className="py-2">{c.canal}</td><td>{c.campanha}</td><td className="text-right">{fmtReais(c.custoCentavos)}</td>
+                    <td className="text-right">{fmtReais(comImposto(c.canal, c.custoCentavos))}</td>
                     <td className="text-right">{c.cliques ?? "—"}</td><td className="text-right">{c.cliques ? fmtReais(Math.round(c.custoCentavos / c.cliques)) : "—"}</td>
-                    <td className="text-right">{c.conversoes ?? "—"}</td><td className="text-right">{c.conversoes ? fmtReais(Math.round(c.custoCentavos / c.conversoes)) : "—"}</td>
+                    <td className="text-right">{c.conversoes ?? "—"}</td><td className="text-right">{c.conversoes ? fmtReais(Math.round(comImposto(c.canal, c.custoCentavos) / c.conversoes)) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
