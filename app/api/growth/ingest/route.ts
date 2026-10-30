@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { growthCampanhas, growthCanais, growthConexoes, growthMensal } from "@/db/schema";
+import { growthCampanhas, growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
+import { fotoPremissas } from "@/lib/growth";
 
 // Recebe do IL Campanhas os números de marketing do mês, por canal.
 // Autenticação: "Authorization: Bearer <token>" — o token identifica a empresa; nada vem do corpo.
@@ -64,8 +65,14 @@ export async function POST(req: Request) {
     .from(growthCanais).where(and(eq(growthCanais.clienteId, con.clienteId), eq(growthCanais.competencia, competencia)));
   const leads = inteiroOuNulo(corpo.leads) ?? totalCanais[0].conv;
   const vendas = inteiroOuNulo(corpo.vendas);
-  await db.insert(growthMensal).values({ escritorioId: con.escritorioId, clienteId: con.clienteId, competencia, midiaCentavos: totalCanais[0].custo, leads, vendas })
-    .onConflictDoUpdate({ target: [growthMensal.clienteId, growthMensal.competencia], set: { midiaCentavos: totalCanais[0].custo, leads, ...(vendas != null ? { vendas } : {}) } });
+  // Foto das premissas: grava só se o mês ainda não tem (um mês já salvo mantém as dele)
+  const [pr] = await db.select().from(growthPremissas).where(eq(growthPremissas.clienteId, con.clienteId));
+  const foto = fotoPremissas(pr);
+  await db.insert(growthMensal).values({ escritorioId: con.escritorioId, clienteId: con.clienteId, competencia, midiaCentavos: totalCanais[0].custo, leads, vendas, premissas: foto })
+    .onConflictDoUpdate({
+      target: [growthMensal.clienteId, growthMensal.competencia],
+      set: { midiaCentavos: totalCanais[0].custo, leads, ...(vendas != null ? { vendas } : {}), premissas: sql`coalesce(${growthMensal.premissas}, ${JSON.stringify(foto)}::jsonb)` },
+    });
   await db.update(growthConexoes).set({ ultimoEnvioEm: new Date() }).where(eq(growthConexoes.id, con.id));
   return resposta(200, { ok: true, competencia, canais: linhas.length, campanhas: campanhas.length, midia: totalCanais[0].custo / 100, leads });
 }

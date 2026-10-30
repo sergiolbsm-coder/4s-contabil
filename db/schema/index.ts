@@ -449,6 +449,11 @@ export const finEnvios = pgTable(
 
 // ───────────── Growth: premissas e acompanhamento de marketing/vendas ─────────────
 
+export type FotoPremissas = {
+  ticketCentavos: number | null; cacCentavos: number | null; usaMidia: boolean; custosVariaveisBps: number | null;
+  custosFixosCentavos: number | null; metaPadraoCentavos: number | null; impostosMidiaBps: Record<string, number>; salvoEm: string;
+};
+
 export const growthPremissas = pgTable("growth_premissas", {
   id: uuid("id").defaultRandom().primaryKey(),
   escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
@@ -478,6 +483,7 @@ export const growthMensal = pgTable(
     vendas: integer("vendas"),
     receitaVendasCentavos: integer("receita_vendas_centavos"), // valor vendido no mês vindo do marketing (base do ROAS real)
     custoComercialCentavos: integer("custo_comercial_centavos"), // comissões/equipe comercial/outros custos de aquisição (entra no CAC real)
+    premissas: jsonb("premissas").$type<FotoPremissas>(), // foto das premissas quando o mês foi salvo/recebido: o histórico não muda se as premissas mudarem depois
   },
   (t) => [uniqueIndex("growth_mensal_uq").on(t.clienteId, t.competencia)],
 );

@@ -92,6 +92,13 @@
       "when": 1793379671662,
       "tag": "0012_loose_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793402614931,
+      "tag": "0013_brave_talisman",
+      "breakpoints": true
     }
   ]
 }

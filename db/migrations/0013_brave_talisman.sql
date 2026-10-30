@@ -1,0 +1,1 @@
+ALTER TABLE "growth_mensal" ADD COLUMN "premissas" jsonb;

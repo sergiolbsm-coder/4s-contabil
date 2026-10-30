@@ -1,4 +1,5 @@
 import { somarMeses } from "@/lib/financas";
+import type { FotoPremissas } from "@/db/schema";
 
 // Cálculos do módulo Growth (ponto de equilíbrio, meta e projeção). Tudo em centavos.
 
@@ -63,3 +64,15 @@ export function parsePctBps(v: unknown): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 1000 ? Math.round(n * 100) : null;
 }
 export const fmtPct = (bps: number | null | undefined) => (bps == null ? "" : (bps / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 }));
+
+// Foto das premissas gravadas hoje (valores vazios continuam vazios: significam "calculado do DRE")
+export function fotoPremissas(pr: {
+  ticketMedioCentavos: number | null; cacCentavos: number | null; usaMidia: boolean; custosVariaveisBps: number | null;
+  custosFixosCentavos: number | null; metaFaturamentoCentavos: number | null; impostosMidiaBps: Record<string, number>;
+} | undefined): FotoPremissas {
+  return {
+    ticketCentavos: pr?.ticketMedioCentavos ?? null, cacCentavos: pr?.cacCentavos ?? null, usaMidia: pr?.usaMidia ?? false,
+    custosVariaveisBps: pr?.custosVariaveisBps ?? null, custosFixosCentavos: pr?.custosFixosCentavos ?? null,
+    metaPadraoCentavos: pr?.metaFaturamentoCentavos ?? null, impostosMidiaBps: pr?.impostosMidiaBps ?? {}, salvoEm: new Date().toISOString(),
+  };
+}

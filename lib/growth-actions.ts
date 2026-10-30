@@ -3,10 +3,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { eq } from "drizzle-orm";
 import { growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
 import { parseReais } from "@/lib/dinheiro";
 import { acessoEdicao, competenciaValida } from "@/lib/financas";
-import { parsePctBps } from "@/lib/growth";
+import { fotoPremissas, parsePctBps } from "@/lib/growth";
 
 const vazio = (f: FormData, k: string) => !String(f.get(k) ?? "").trim();
 const inteiro = (f: FormData, k: string) => {
@@ -51,8 +52,11 @@ export async function salvarMesGrowth(clienteId: string, form: FormData) {
     receitaVendasCentavos: vazio(form, "receitaVendas") ? null : parseReais(String(form.get("receitaVendas"))),
     custoComercialCentavos: vazio(form, "custoComercial") ? null : parseReais(String(form.get("custoComercial"))),
   };
-  await db.insert(growthMensal).values({ escritorioId: a.escritorioId, clienteId, competencia, ...valores })
-    .onConflictDoUpdate({ target: [growthMensal.clienteId, growthMensal.competencia], set: valores });
+  // Ao salvar o mês, congela as premissas de hoje nele (meta padrão, impostos...), para o histórico não mudar depois
+  const [pr] = await db.select().from(growthPremissas).where(eq(growthPremissas.clienteId, clienteId));
+  const completo = { ...valores, premissas: fotoPremissas(pr) };
+  await db.insert(growthMensal).values({ escritorioId: a.escritorioId, clienteId, competencia, ...completo })
+    .onConflictDoUpdate({ target: [growthMensal.clienteId, growthMensal.competencia], set: completo });
   revalidatePath(`/financas/${clienteId}/growth`);
 }
 
