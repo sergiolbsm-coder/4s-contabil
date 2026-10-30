@@ -1,12 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { growthMensal, growthPremissas } from "@/db/schema";
+import { growthCanais, growthConexoes, growthMensal, growthPremissas } from "@/db/schema";
 import { acessoFinancas, diasNoMes, hojeISO, mesAtual, mesCurto, mesLongo, somarMeses } from "@/lib/financas";
 import { carregarBase, dreMes } from "@/lib/financas-dados";
 import { cenarioMidia, equilibrioSemMidia, fmtPct, margemContribuicao, planoDaMeta, projecao, type Premissas } from "@/lib/growth";
 import { salvarMesGrowth, salvarPremissas } from "@/lib/growth-actions";
 import { fmtReais, reaisParaCampo } from "@/lib/dinheiro";
 import { Botao } from "@/components/botao";
+import { GerarToken } from "./conexao";
 
 export const dynamic = "force-dynamic";
 const campo = "w-full rounded border px-2 py-1 text-sm";
@@ -22,6 +23,9 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
   const [pr] = await db.select().from(growthPremissas).where(eq(growthPremissas.clienteId, clienteId));
   const mensal = await db.select().from(growthMensal).where(eq(growthMensal.clienteId, clienteId));
   const mes = mesAtual();
+  const [conexao] = await db.select().from(growthConexoes).where(eq(growthConexoes.clienteId, clienteId));
+  const canais = await db.select().from(growthCanais).where(eq(growthCanais.clienteId, clienteId));
+  const canaisRecentes = canais.filter((c) => c.competencia >= somarMeses(mes, -5)).sort((x, y) => y.competencia.localeCompare(x.competencia) || x.canal.localeCompare(y.canal));
 
   // Dados reais dos 3 últimos meses fechados (DRE por competência)
   const ult3 = [1, 2, 3].map((i) => dreMes(base.lancs, base.cats, somarMeses(mes, -i)));
@@ -171,6 +175,31 @@ export default async function Growth({ params }: { params: Promise<{ clienteId: 
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="rounded-xl border bg-white p-4">
+        <h3 className="mb-1 font-semibold">{proj ? "6" : "5"}. Conexão com o IL Campanhas</h3>
+        <p className="mb-3 text-sm text-slate-500">
+          {conexao ? `Conectado. ${conexao.ultimoEnvioEm ? `Último envio em ${conexao.ultimoEnvioEm.toLocaleDateString("pt-BR")}.` : "Nenhum envio recebido ainda."}` : "Receba automaticamente mídia, cliques e conversões de Google Ads e Meta Ads, em vez de digitar."}
+          {" "}Os valores recebidos preenchem a seção 4 (mídia e leads) e o CAC e o ROAS reais.
+        </p>
+        {a.edita && a.u.papel !== "cliente" && <GerarToken clienteId={clienteId} conectado={!!conexao} />}
+        {canaisRecentes.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b text-slate-500"><tr><th className="py-2">Mês</th><th>Canal</th><th className="text-right">Custo</th><th className="text-right">Cliques</th><th className="text-right">CPC</th><th className="text-right">Conversões</th><th className="text-right">Custo/conversão</th></tr></thead>
+              <tbody>
+                {canaisRecentes.map((c) => (
+                  <tr key={c.id} className="border-b last:border-0">
+                    <td className="py-2">{mesCurto(c.competencia)}</td><td>{c.canal}</td><td className="text-right">{fmtReais(c.custoCentavos)}</td>
+                    <td className="text-right">{c.cliques ?? "—"}</td><td className="text-right">{c.cliques ? fmtReais(Math.round(c.custoCentavos / c.cliques)) : "—"}</td>
+                    <td className="text-right">{c.conversoes ?? "—"}</td><td className="text-right">{c.conversoes ? fmtReais(Math.round(c.custoCentavos / c.conversoes)) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {proj && (

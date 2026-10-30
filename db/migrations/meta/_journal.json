@@ -71,6 +71,13 @@
       "when": 1793375975620,
       "tag": "0009_first_jamie_braddock",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793376185612,
+      "tag": "0010_stormy_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

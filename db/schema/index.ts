@@ -477,3 +477,31 @@ export const growthMensal = pgTable(
   },
   (t) => [uniqueIndex("growth_mensal_uq").on(t.clienteId, t.competencia)],
 );
+
+// Conexão de uma empresa com o IL Campanhas: o token (guardado só como hash) autoriza o envio dos números de marketing
+export const growthConexoes = pgTable("growth_conexoes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+  clienteId: uuid("cliente_id").notNull().unique().references(() => clientes.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  ultimoEnvioEm: timestamp("ultimo_envio_em"),
+});
+
+// Números mensais por canal (Google Ads, Meta Ads...), vindos do IL Campanhas
+export const growthCanais = pgTable(
+  "growth_canais",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
+    clienteId: uuid("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+    competencia: varchar("competencia", { length: 7 }).notNull(),
+    canal: varchar("canal", { length: 40 }).notNull(),
+    custoCentavos: integer("custo_centavos").notNull().default(0),
+    impressoes: integer("impressoes"),
+    cliques: integer("cliques"),
+    conversoes: integer("conversoes"),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("growth_canais_uq").on(t.clienteId, t.competencia, t.canal)],
+);
