@@ -5,12 +5,19 @@ import { exigirUsuario } from "@/lib/session";
 import { sair } from "@/lib/auth-actions";
 import { ROTULOS_PAPEL, ehAdmin, podeEditarClientes, podeVerClientes } from "@/lib/papeis";
 import { PRODUTO, corSegura } from "@/lib/escritorio";
+import { db } from "@/lib/db";
+import { clientes } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { Nav, type ItemMenu } from "./nav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await exigirUsuario();
   if (u.trocarSenha) redirect("/trocar-senha");
   const esc = u.escritorio;
+  // Usuário cliente vê a própria empresa no topo (logo ou nome); a equipe vê a marca do escritório
+  const [empresa] = u.papel === "cliente" && u.clienteId
+    ? await db.select({ nome: clientes.nomeFantasia, razao: clientes.razaoSocial, logoUrl: clientes.logoUrl }).from(clientes).where(and(eq(clientes.id, u.clienteId), eq(clientes.escritorioId, esc.id)))
+    : [];
 
   const edita = podeEditarClientes(u.papel);
   const itens: ItemMenu[] = [
@@ -57,9 +64,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen md:flex" style={{ "--brand": corSegura(esc.corPrimaria) } as React.CSSProperties}>
       <aside className="flex flex-col gap-4 p-4 text-slate-100 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0" style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--brand) 60%, #000) 0%, var(--brand) 100%)" }}>
-        <Link href="/" className="px-3 text-lg font-semibold">
-          {esc.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={esc.logoUrl} alt={esc.nome} className="max-h-10 max-w-full" /> : esc.nome}
-        </Link>
+        {empresa ? (
+          <Link href="/" className="px-3">
+            <span className="block text-lg font-semibold">
+              {empresa.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={empresa.logoUrl} alt={empresa.nome ?? empresa.razao} className="max-h-12 max-w-full rounded bg-white/95 p-1" /> : (empresa.nome ?? empresa.razao)}
+            </span>
+            <span className="mt-1 block text-[11px] text-white/60">Atendimento: {esc.nome}</span>
+          </Link>
+        ) : (
+          <Link href="/" className="px-3 text-lg font-semibold">
+            {esc.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={esc.logoUrl} alt={esc.nome} className="max-h-10 max-w-full" /> : esc.nome}
+          </Link>
+        )}
         <Nav itens={itens} />
         <div className="mt-auto space-y-1 border-t border-white/10 px-3 pt-3 text-sm">
           <div className="font-medium">{u.nome}</div>

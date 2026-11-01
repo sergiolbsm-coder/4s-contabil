@@ -9,6 +9,7 @@ import { auditoria, clientes, contatos, contratos } from "@/db/schema";
 import { exigirUsuario } from "@/lib/session";
 import { podeEditarClientes } from "@/lib/papeis";
 import { clienteDoEscritorio, idValido } from "@/lib/guards";
+import { urlSegura } from "@/lib/entregas";
 
 const vazio = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 const opt = <T extends z.ZodType>(s: T) => z.preprocess(vazio, s.optional());
@@ -16,6 +17,7 @@ const opt = <T extends z.ZodType>(s: T) => z.preprocess(vazio, s.optional());
 const clienteSchema = z.object({
   razaoSocial: z.string().trim().min(2, "Informe a razão social"),
   nomeFantasia: opt(z.string().trim()),
+  logoUrl: opt(z.string().trim().max(500).refine((v) => v.startsWith("https://") && urlSegura(v) !== null, "O link da logo precisa começar com https://")),
   cnpj: opt(z.string().trim().regex(/^[\d./-]{14,18}$/, "CNPJ inválido")),
   solucao: z.enum(["contabil", "regularizacao", "abertura", "consultoria"]),
   regime: z.enum(["mei", "simples", "presumido", "real", "nao_definido"]),
@@ -44,7 +46,7 @@ export async function criarCliente(_p: Estado, form: FormData): Promise<Estado> 
   const u = await exigirEdicao();
   const r = clienteSchema.safeParse(Object.fromEntries(form));
   if (!r.success) return { erro: r.error.issues[0].message };
-  const [c] = await db.insert(clientes).values({ ...r.data, escritorioId: u.escritorio.id, responsavelId: u.id }).returning({ id: clientes.id });
+  const [c] = await db.insert(clientes).values({ ...r.data, logoUrl: r.data.logoUrl ?? null, escritorioId: u.escritorio.id, responsavelId: u.id }).returning({ id: clientes.id });
   await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: "criar", entidade: "cliente", entidadeId: c.id });
   redirect(`/clientes/${c.id}`);
 }
@@ -54,7 +56,7 @@ export async function atualizarCliente(id: string, _p: Estado, form: FormData): 
   await clienteOuErro(u.escritorio.id, id);
   const r = clienteSchema.safeParse(Object.fromEntries(form));
   if (!r.success) return { erro: r.error.issues[0].message };
-  await db.update(clientes).set({ ...r.data, atualizadoEm: new Date() }).where(and(eq(clientes.id, id), eq(clientes.escritorioId, u.escritorio.id)));
+  await db.update(clientes).set({ ...r.data, logoUrl: r.data.logoUrl ?? null, atualizadoEm: new Date() }).where(and(eq(clientes.id, id), eq(clientes.escritorioId, u.escritorio.id)));
   await db.insert(auditoria).values({ usuarioId: u.id, escritorioId: u.escritorio.id, acao: "atualizar", entidade: "cliente", entidadeId: id });
   revalidatePath(`/clientes/${id}`);
   return undefined;

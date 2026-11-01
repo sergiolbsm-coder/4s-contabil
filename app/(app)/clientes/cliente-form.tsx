@@ -5,7 +5,7 @@ import { useActionState } from "react";
 
 type Estado = { erro?: string } | undefined;
 type Valores = Partial<Record<
-  "razaoSocial" | "nomeFantasia" | "cnpj" | "solucao" | "regime" | "status" | "certificadoValidade" | "observacoes",
+  "razaoSocial" | "nomeFantasia" | "logoUrl" | "cnpj" | "solucao" | "regime" | "status" | "certificadoValidade" | "observacoes",
   string | null
 >>;
 
@@ -35,6 +35,10 @@ export function ClienteForm({
       </label>
       <label>Nome fantasia
         <input name="nomeFantasia" defaultValue={valores.nomeFantasia ?? ""} className={campo} />
+      </label>
+      <label className="sm:col-span-2">Link da logo da empresa (opcional)
+        <input name="logoUrl" type="url" defaultValue={valores.logoUrl ?? ""} placeholder="https://…/logo.png" className={campo} />
+        <span className="mt-0.5 block text-xs text-slate-500">Aparece no topo do portal do cliente no lugar do nome. Sem logo, aparece o nome fantasia (ou a razão social).</span>
       </label>
       <label>CNPJ
         <input name="cnpj" defaultValue={valores.cnpj ?? ""} placeholder="00.000.000/0000-00" className={campo} />

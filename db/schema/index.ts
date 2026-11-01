@@ -89,6 +89,7 @@ export const clientes = pgTable(
     escritorioId: uuid("escritorio_id").notNull().references(() => escritorios.id, { onDelete: "restrict" }),
     razaoSocial: varchar("razao_social", { length: 200 }).notNull(),
     nomeFantasia: varchar("nome_fantasia", { length: 200 }),
+    logoUrl: varchar("logo_url", { length: 500 }), // logo da empresa cliente (link https), mostrada no topo do portal dela
     cnpj: varchar("cnpj", { length: 18 }),
     solucao: solucaoEnum("solucao").notNull().default("contabil"),
     regime: regimeEnum("regime").notNull().default("nao_definido"),
