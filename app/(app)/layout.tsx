@@ -72,8 +72,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="mt-1 block text-[11px] text-white/60">Atendimento: {esc.nome}</span>
           </Link>
         ) : (
-          <Link href="/" className="px-3 text-lg font-semibold">
-            {esc.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={esc.logoUrl} alt={esc.nome} className="max-h-10 max-w-full" /> : esc.nome}
+          <Link href="/" className="block px-3 text-lg font-semibold">
+            {esc.logoUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={esc.logoUrl} alt={esc.nome} className="max-h-10 max-w-full" /> : (
+              <>
+                {/* Padrão da plataforma: logo do Instituto da Liderança (recortada) + nome do produto; escritório com logo própria usa a dele */}
+                <span className="block h-14 overflow-hidden rounded-lg bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo-idl.png" alt="Instituto da Liderança" className="h-full w-full object-cover" style={{ objectPosition: "50% 53%" }} />
+                </span>
+                <span className="mt-2 block">{PRODUTO}</span>
+              </>
+            )}
           </Link>
         )}
         <Nav itens={itens} />

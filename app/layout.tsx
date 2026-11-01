@@ -7,7 +7,7 @@ const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "600"
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-jetbrains", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "ContaHub",
+  title: "IL Conta",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },

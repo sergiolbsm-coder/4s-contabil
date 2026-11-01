@@ -14,7 +14,7 @@ export type Escritorio = {
   config: ConfigEscritorio;
 };
 
-export const PRODUTO = "ContaHub";
+export const PRODUTO = "IL Conta";
 
 export const COR_PADRAO = "#391694"; // roxo institucional do IDL
 const COR_ANTIGA = "#0f172a"; // padrão antigo (cinza-azulado), tratado como "sem cor própria"
